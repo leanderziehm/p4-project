@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
+# make sudo do nothing
+RUN echo '#!/bin/sh\nexec "$@"' > /usr/bin/sudo && chmod +x /usr/bin/sudo
+
 # Create target directory
 WORKDIR /p4-project/src
 # Start OVS service and drop into bash

@@ -7,6 +7,7 @@ build:
 run:
 	sudo podman run \
 		--rm \
+		--replace \
 		--privileged \
 		--network host \
 		-it \
