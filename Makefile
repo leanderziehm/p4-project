@@ -10,6 +10,6 @@ run:
 		--privileged \
 		--network host \
 		-it \
-		-v $(PWD):/workspace \
+		-v $(shell pwd):/p4-project:Z \
 		--name $(CONTAINER_NAME) \
 		localhost/$(IMAGE_NAME):latest

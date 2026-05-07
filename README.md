@@ -23,79 +23,40 @@ The environment is containerized using Podman/Docker to simplify setup and ensur
 
 ---
 
-# Project Structure
-
-```text
-p4-project/
-│
-├── Dockerfile
-├── Makefile
-├── DEADLINE.md
-├── TASKS_BACKLOG.md
-│
-├── p4src/                 # P4 source files
-├── controller/            # Python control plane
-├── topology/              # Mininet topology scripts
-├── scripts/               # Traffic generation & testing
-├── docs/                  # Report images, diagrams, notes
-└── results/               # Evaluation outputs and metrics
-```
-
----
-
 # File Overview
 
 ## `Dockerfile`
-
-Defines the container environment used for development and testing.
-
-### Includes
-
-* Ubuntu 22.04 base image
-* Mininet
-* Open vSwitch
-* Python3
-* P4 dependencies
-* `p4c` compiler repository
-
-### Purpose
-
-Provides a reproducible networking environment for:
-
-* P4 development
-* Mininet testing
-* Controller execution
+requires podman installed
 
 ---
 
+
+
+# Main Components
+
+# Development Workflow
 ## `Makefile`
+## 1. Build Container
 
-Simplifies container management.
-
-### Available Commands
-
-#### Build container
-Builds the image p4-mininet
 ```bash
 make build
 ```
-#### Run development container
+
+---
+
+## 2. Start Development Environment
 
 ```bash
 make run
 ```
 
-Starts a privileged container with:
-
-* host networking
-* mounted project directory
-* Open vSwitch enabled
-
 ---
 
-## `DEADLINE.md`
+## 3. run
 
-Contains all official course deadlines and defense information.
+---
+???
+---
 
 ### Important Dates
 
@@ -137,176 +98,6 @@ The backlog is divided into several development phases:
 
 ---
 
-# Main Components
-
-## `p4src/`
-
-Contains all P4 programs.
-
-### Responsibilities
-
-* Packet parsing
-* Forwarding logic
-* Stateful registers
-* Attack detection logic
-* Dynamic filtering
-
-### Expected Features
-
-* IPv4/TCP/UDP parsing
-* SYN tracking
-* Port scan detection
-* ARP flood monitoring
-* Blacklist enforcement
-
----
-
-## `controller/`
-
-Python control-plane implementation.
-
-### Responsibilities
-
-* Reading switch counters/registers
-* Applying detection thresholds
-* Updating blacklist tables
-* Runtime mitigation logic
-
-### Technologies
-
-* Python3
-* P4Runtime APIs
-
----
-
-## `topology/`
-
-Mininet topology definitions.
-
-### Responsibilities
-
-* Virtual network creation
-* Host and attacker setup
-* Switch configuration
-
-### Example Topologies
-
-* Normal clients
-* Multiple attackers
-* Multi-host traffic scenarios
-
----
-
-## `scripts/`
-
-Traffic generation and attack simulation utilities.
-
-### Includes
-
-* DDoS generators
-* Port scanners
-* ARP flood scripts
-* HTTP abuse simulation
-
-Used for validating firewall behavior.
-
----
-
-## `docs/`
-
-Project documentation resources.
-
-### Includes
-
-* Architecture diagrams
-* Screenshots
-* Notes
-* Defense material
-
----
-
-## `results/`
-
-Stores evaluation outputs.
-
-### Includes
-
-* Packet loss measurements
-* Detection timing
-* Throughput comparisons
-* Benchmark results
-
----
-
-# Development Workflow
-
-## 1. Build Container
-
-```bash
-make build
-```
-
----
-
-## 2. Start Development Environment
-
-```bash
-make run
-```
-
----
-
-## 3. Compile P4 Program
-
-Example:
-
-```bash
-p4c --target bmv2 --arch v1model firewall.p4
-```
-
----
-
-## 4. Run Mininet Topology
-
-Example:
-
-```bash
-sudo python3 topology/topology.py
-```
-
----
-
-## 5. Start Controller
-
-Example:
-
-```bash
-python3 controller/controller.py
-```
-
----
-
-## 6. Execute Attack Simulations
-
-Example:
-
-```bash
-python3 scripts/ddos_attack.py
-```
-
----
-
-
-### Related Tasks
-
-* T4 — Per-IP Packet Counter
-* T5 — TCP State Tracking
-* T6 — Port Diversity Tracker
-* T8 — DDoS Detection Rules
-* T9 — Port Scan Detection
-* T12 — Dynamic Blacklist Table
-
----
 
 # Project Goals
 
