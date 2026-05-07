@@ -25,13 +25,13 @@ import os
 import subprocess
 from time import sleep
 
-import utils.p4runtime_lib.simple_controller
+import p4runtime_lib.simple_controller
 from mininet.cli import CLI
 from mininet.link import TCLink
 from mininet.net import Mininet
 from mininet.topo import Topo
-from utils.p4_mininet import P4Host, P4Switch
-from utils.p4runtime_switch import P4RuntimeSwitch
+from p4_mininet import P4Host, P4Switch
+from p4runtime_switch import P4RuntimeSwitch
 
 
 def configureP4Switch(**switch_args):
@@ -270,7 +270,7 @@ class ExerciseRunner:
         self.logger('Configuring switch %s using P4Runtime with file %s' % (sw_name, runtime_json))
         with open(runtime_json, 'r') as sw_conf_file:
             outfile = '%s/%s-p4runtime-requests.txt' %(self.log_dir, sw_name)
-            utils.p4runtime_lib.simple_controller.program_switch(
+            p4runtime_lib.simple_controller.program_switch(
                 addr='127.0.0.1:%d' % grpc_port,
                 device_id=device_id,
                 sw_conf_file=sw_conf_file,

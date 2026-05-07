@@ -23,7 +23,7 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.net import Mininet
 from mininet.topo import Topo
-from utils.mininet.p4_mininet import P4Host, P4Switch
+from p4_mininet import P4Host, P4Switch
 
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',

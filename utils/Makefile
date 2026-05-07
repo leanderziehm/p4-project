@@ -1,11 +1,11 @@
-BUILD_DIR = out/build
-PCAP_DIR = out/pcaps
-LOG_DIR = out/logs
+BUILD_DIR = build
+PCAP_DIR = pcaps
+LOG_DIR = logs
 
 P4C = p4c-bm2-ss
 P4C_ARGS += --p4runtime-files $(BUILD_DIR)/$(basename $@).p4.p4info.txt
 
-RUN_SCRIPT = ../utils/run_exercise.py
+RUN_SCRIPT = ../../utils/run_exercise.py
 
 ifndef TOPO
 TOPO = topology.json
@@ -32,7 +32,7 @@ endif
 all: run
 
 run: build
-	sudo uv run python3 $(RUN_SCRIPT) -t $(TOPO) $(run_args)
+	sudo python3 $(RUN_SCRIPT) -t $(TOPO) $(run_args)
 
 stop:
 	sudo mn -c

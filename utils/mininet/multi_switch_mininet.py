@@ -23,13 +23,13 @@ import re
 import sys
 from time import sleep
 
-import utils.mininet.appcontroller as appcontroller
-import utils.mininet.apptopo as apptopo
+import appcontroller
+import apptopo
 from mininet.cli import CLI
 from mininet.link import TCLink
 from mininet.log import setLogLevel
 from mininet.net import Mininet
-from utils.mininet.p4_mininet import P4Host, P4Switch
+from p4_mininet import P4Host, P4Switch
 
 parser = argparse.ArgumentParser(description='Mininet demo')
 parser.add_argument('--behavioral-exe', help='Path to behavioral executable',

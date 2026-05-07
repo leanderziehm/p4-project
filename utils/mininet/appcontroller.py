@@ -1,6 +1,6 @@
 import subprocess
 
-from utils.mininet.shortest_path import ShortestPath
+from shortest_path import ShortestPath
 
 
 class AppController:
