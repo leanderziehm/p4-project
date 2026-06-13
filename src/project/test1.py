@@ -54,7 +54,7 @@ def handle(pkt):
                     found = True
 
 def main():
-    iface = "h2-eth0"
+    iface = "eth0"
     print(f"Sniffing on {iface} for MRI packets...")
 
     sniff(
