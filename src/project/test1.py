@@ -71,8 +71,8 @@ def send_test(iface):
 def main():
     global found
 
-    iface = "eth0"   # IMPORTANT: use loopback for local testing
-    # iface = "lo"   # IMPORTANT: use loopback for local testing
+    # iface = "eth0"   # IMPORTANT: use loopback for local testing
+    iface = "lo"   # IMPORTANT: use loopback for local testing
 
     print(f"Sniffing + testing automatically on {iface}...")
 
