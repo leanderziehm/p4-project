@@ -1,5 +1,5 @@
 runmri:
-	cd src/mri && make
+	cd src/mri && make && make go
 
 runproject:
 	cd src/project && make
