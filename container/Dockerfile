@@ -38,7 +38,7 @@ COPY patches/ /root/patches/
 # COPY p4.vim /root/p4.vim
 RUN ./user-common-bootstrap.sh
 # RUN echo "p4 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-# RUN apt-get install iputils-ping
+RUN apt-get install tmux
 USER p4
-# WORKDIR /home/p4
+WORKDIR /p4-project
 CMD ["/bin/bash"]

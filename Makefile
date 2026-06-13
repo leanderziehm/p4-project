@@ -1,0 +1,2 @@
+launch:
+	cd container && make 

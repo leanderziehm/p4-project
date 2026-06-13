@@ -14,3 +14,12 @@ run:
 		-v $(shell realpath ../):/p4-project:Z \
 		--name $(CONTAINER_NAME) \
 		localhost/$(IMAGE_NAME):latest
+
+mininet:
+	sudo podman exec -it <container_name> mnexec h1 bash
+	sudo podman exec -it <container_name> mnexec h2 bash
+
+
+x:
+	-e DISPLAY=$DISPLAY \
+	-v /tmp/.X11-unix:/tmp/.X11-unix \

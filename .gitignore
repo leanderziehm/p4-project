@@ -1,5 +1,8 @@
 other
 output
+logs
+*.pcap
+*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
