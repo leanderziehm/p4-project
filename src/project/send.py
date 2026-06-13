@@ -26,6 +26,7 @@ def get_if():
     iface=None # "h1-eth0"
     for i in get_if_list():
         if "eth0" in i:
+            print("my-interface:",i)
             iface=i
             break;
     if not iface:
