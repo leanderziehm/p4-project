@@ -17,6 +17,8 @@ typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 typedef bit<32> switchID_t;
 typedef bit<32> qdepth_t;
+typedef bit<32> qtime_t;
+typedef bit<32> ingress_ts_t;
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -53,6 +55,8 @@ header mri_t {
 header switch_t {
     switchID_t  swid;
     qdepth_t    qdepth;
+    ingress_ts_t ingress_ts;
+    qtime_t qtime;
 }
 
 struct ingress_metadata_t {
@@ -200,10 +204,12 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].setValid();
         hdr.swtraces[0].swid = swid;
         hdr.swtraces[0].qdepth = (qdepth_t)standard_metadata.deq_qdepth;
+        hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;// see docs: https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
+        hdr.swtraces[0].qtime = (qtime_t)standard_metadata.deq_timedelta; 
 
-        hdr.ipv4.ihl = hdr.ipv4.ihl + 2;
-        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 8;
-        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 8;
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 4; // Internet Header Length.
+        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16; // adding 4 bytes 32/8 = 4
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
     }
 
     table swtrace {
