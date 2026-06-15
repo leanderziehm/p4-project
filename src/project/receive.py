@@ -12,7 +12,7 @@ from scapy.all import (
     sniff
 )
 from scapy.layers.inet import _IPOption_HDR
-
+# ELK  database 
 
 def get_if():
     ifs=get_if_list()
@@ -44,10 +44,15 @@ class IPOption_MRI(IPOption):
                                    [],
                                    SwitchTrace,
                                    count_from=lambda pkt:(pkt.count*1)) ]
-
+SHOULD_UPLOAD = True
 def handle_pkt(pkt):
     print("got a packet")
     pkt.show2()
+
+    if SHOULD_UPLOAD:
+         pass
+        # ELK.upload(pkt)
+         
 #    hexdump(pkt)
     sys.stdout.flush()
 
