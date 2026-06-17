@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# send.py
 
 import socket
 import sys
@@ -22,8 +23,10 @@ from scapy.all import (
 from scapy.layers.inet import _IPOption_HDR
 
 
+# -----------------------------
+# Interface selection
+# -----------------------------
 def get_if():
-
     iface = None
 
     for i in get_if_list():
@@ -38,8 +41,10 @@ def get_if():
     return iface
 
 
+# -----------------------------
+# Custom switch telemetry header
+# -----------------------------
 class SwitchTrace(Packet):
-
     fields_desc = [
         IntField("swid", 0),
         IntField("qdepth", 0),
@@ -52,8 +57,10 @@ class SwitchTrace(Packet):
         return "", p
 
 
+# -----------------------------
+# MRI IP option
+# -----------------------------
 class IPOption_MRI(IPOption):
-
     name = "MRI"
     option = 31
 
@@ -79,13 +86,16 @@ class IPOption_MRI(IPOption):
     ]
 
 
+# -----------------------------
+# Main sender
+# -----------------------------
 def main():
 
     if len(sys.argv) < 6:
         print(
             "Usage:\n"
             "python3 send.py <dst_host> <experiment_id> "
-            "<count> <interval_sec> <message>"
+            "<count> <interval_sec> <message...>"
         )
         sys.exit(1)
 
@@ -93,7 +103,10 @@ def main():
     experiment_id = sys.argv[2]
     count = int(sys.argv[3])
     interval = float(sys.argv[4])
-    message = sys.argv[5]
+
+    # IMPORTANT FIX:
+    # allow full multi-word / paragraph payloads
+    message = " ".join(sys.argv[5:]).strip()
 
     iface = get_if()
 
@@ -103,16 +116,12 @@ def main():
     print(f"Experiment  : {experiment_id}")
     print(f"Count       : {count}")
     print(f"Interval    : {interval}")
+    print(f"Payload size: {len(message)} chars")
 
     try:
-
         for seq in range(count):
 
-            payload = (
-                f"{experiment_id},"
-                f"{seq},"
-                f"{message}"
-            )
+            payload = f"{experiment_id},{seq},{message}"
 
             pkt = (
                 Ether(
@@ -136,11 +145,7 @@ def main():
                 payload
             )
 
-            sendp(
-                pkt,
-                iface=iface,
-                verbose=False
-            )
+            sendp(pkt, iface=iface, verbose=False)
 
             sleep(interval)
 
