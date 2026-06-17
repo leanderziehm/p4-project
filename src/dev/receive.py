@@ -44,7 +44,8 @@ class SwitchTrace(Packet):
         IntField("swid", 0),
         IntField("qdepth", 0),
         IntField("ingress_ts", 0),
-        IntField("qtime", 0)
+        IntField("qtime", 0),
+        IntField("pkt_len", 0)
     ]
 
     def extract_padding(self, p):
@@ -110,7 +111,8 @@ def extract_packet_info(pkt):
                             "swid": trace.swid,
                             "qdepth": trace.qdepth,
                             "ingress_ts": trace.ingress_ts,
-                            "qtime": trace.qtime
+                            "qtime": trace.qtime,
+                            "pkt_len": trace.pkt_len
                         })
 
         entry["switches"] = switches

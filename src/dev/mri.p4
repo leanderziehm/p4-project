@@ -19,6 +19,7 @@ typedef bit<32> switchID_t;
 typedef bit<32> qdepth_t;
 typedef bit<32> qtime_t;
 typedef bit<32> ingress_ts_t;
+typedef bit<32> pkt_len_t; // TODO CHECK FOR DOCS IF 32 or 16? is it the ip packet size length then is should be 16. 
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -57,6 +58,7 @@ header switch_t {
     qdepth_t    qdepth;
     ingress_ts_t ingress_ts;
     qtime_t qtime;
+    pkt_len_t pkt_len;
 }
 
 struct ingress_metadata_t {
@@ -206,10 +208,12 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qdepth = (qdepth_t)standard_metadata.deq_qdepth;
         hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;// see docs: https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
         hdr.swtraces[0].qtime = (qtime_t)standard_metadata.deq_timedelta; 
+        hdr.swtraces[0].pkt_len = (pkt_len_t)standard_metadata.packet_length;             
 
-        hdr.ipv4.ihl = hdr.ipv4.ihl + 4; // Internet Header Length.
-        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16; // adding 4 bytes 32/8 = 4
-        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 5; // Internet Header Length.
+        // add = 20 how do variables work in p4 can you just define them like this?
+        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 20; // adding 4 bytes 32/8 = 4
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 20;
     }
 
     table swtrace {
