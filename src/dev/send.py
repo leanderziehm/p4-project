@@ -5,81 +5,149 @@ import sys
 from time import sleep
 
 from scapy.all import (
-    IP,
-    UDP,
     Ether,
     FieldLenField,
     IntField,
+    IP,
     IPOption,
     Packet,
     PacketListField,
     ShortField,
+    UDP,
     get_if_hwaddr,
     get_if_list,
     sendp
 )
+
 from scapy.layers.inet import _IPOption_HDR
 
 
 def get_if():
-    ifs=get_if_list()
-    iface=None # "h1-eth0"
+
+    iface = None
+
     for i in get_if_list():
         if "eth0" in i:
-            iface=i
-            break;
-    if not iface:
+            iface = i
+            break
+
+    if iface is None:
         print("Cannot find eth0 interface")
-        exit(1)
+        sys.exit(1)
+
     return iface
 
+
 class SwitchTrace(Packet):
-    fields_desc = [ IntField("swid", 0),
-                  IntField("qdepth", 0),IntField("ingress_ts", 0),IntField("qtime",0)]
+
+    fields_desc = [
+        IntField("swid", 0),
+        IntField("qdepth", 0),
+        IntField("ingress_ts", 0),
+        IntField("qtime", 0)
+    ]
+
     def extract_padding(self, p):
-                return "", p
+        return "", p
+
 
 class IPOption_MRI(IPOption):
+
     name = "MRI"
     option = 31
-    fields_desc = [ _IPOption_HDR,
-                    FieldLenField("length", None, fmt="B",
-                                  length_of="swtraces",
-                                  adjust=lambda pkt,l:l*2+4),
-                    ShortField("count", 0),
-                    PacketListField("swtraces",
-                                   [],
-                                   SwitchTrace,
-                                   count_from=lambda pkt:(pkt.count*1)) ]
+
+    fields_desc = [
+        _IPOption_HDR,
+
+        FieldLenField(
+            "length",
+            None,
+            fmt="B",
+            length_of="swtraces",
+            adjust=lambda pkt, l: l * 2 + 4
+        ),
+
+        ShortField("count", 0),
+
+        PacketListField(
+            "swtraces",
+            [],
+            SwitchTrace,
+            count_from=lambda pkt: pkt.count
+        )
+    ]
 
 
 def main():
 
-    if len(sys.argv)<3:
-        print('pass 2 arguments: <destination> "<message>"')
-        exit(1)
+    if len(sys.argv) < 6:
+        print(
+            "Usage:\n"
+            "python3 send.py <dst_host> <experiment_id> "
+            "<count> <interval_sec> <message>"
+        )
+        sys.exit(1)
 
-    addr = socket.gethostbyname(sys.argv[1])
+    dst_host = sys.argv[1]
+    experiment_id = sys.argv[2]
+    count = int(sys.argv[3])
+    interval = float(sys.argv[4])
+    message = sys.argv[5]
+
     iface = get_if()
 
-    pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / IP(
-        dst=addr, options = IPOption_MRI(count=0,
-            swtraces=[])) / UDP(
-            dport=4321, sport=1234) / sys.argv[2]
+    addr = socket.gethostbyname(dst_host)
 
- #   pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / IP(
- #       dst=addr, options = IPOption_MRI(count=2,
- #           swtraces=[SwitchTrace(swid=0,qdepth=0), SwitchTrace(swid=1,qdepth=0)])) / UDP(
- #           dport=4321, sport=1234) / sys.argv[2]
-    pkt.show2()
-    #hexdump(pkt)
+    print(f"Destination : {addr}")
+    print(f"Experiment  : {experiment_id}")
+    print(f"Count       : {count}")
+    print(f"Interval    : {interval}")
+
     try:
-      for i in range(int(sys.argv[3])):
-        sendp(pkt, iface=iface)
-        sleep(1)
+
+        for seq in range(count):
+
+            payload = (
+                f"{experiment_id},"
+                f"{seq},"
+                f"{message}"
+            )
+
+            pkt = (
+                Ether(
+                    src=get_if_hwaddr(iface),
+                    dst="ff:ff:ff:ff:ff:ff"
+                )
+                /
+                IP(
+                    dst=addr,
+                    options=IPOption_MRI(
+                        count=0,
+                        swtraces=[]
+                    )
+                )
+                /
+                UDP(
+                    sport=1234,
+                    dport=4321
+                )
+                /
+                payload
+            )
+
+            sendp(
+                pkt,
+                iface=iface,
+                verbose=False
+            )
+
+            sleep(interval)
+
+        print("Finished sending.")
+
     except KeyboardInterrupt:
-        raise
+        print("Stopped.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
