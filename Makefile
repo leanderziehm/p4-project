@@ -1,6 +1,8 @@
+rundev:
+	cd src/dev && make build && make run
+
 runproject:
 	cd src/project && make build && make go
-
 
 runmri:
 	cd src/mri && make build && make go
