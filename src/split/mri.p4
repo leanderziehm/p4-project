@@ -175,9 +175,6 @@ control MyIngress(inout headers hdr,
     action clone_to_both() {
         // clone session 1 -> H3 (header only)
         clone(CloneType.I2E, 1);
-
-        // clone session 2 -> H2 (payload only)
-        clone(CloneType.I2E, 2);
     }
 
     table ipv4_lpm {
@@ -228,7 +225,13 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    action add_swtrace(switchID_t swid) {
+    action add_swtrace(switchID_t swid,ip4Addr_t final_host1,ip4Addr_t final_host2,ip4Addr_t telemetry_host) {
+
+        if (hdr.ipv4.dstAddr == telemetry_host){
+            //ping maybe 
+            return;
+        }
+
         hdr.mri.count = hdr.mri.count + 1;
         hdr.swtraces.push_front(1);
         // According to the P4_16 spec, pushed elements are invalid, so we need
@@ -247,6 +250,28 @@ control MyEgress(inout headers hdr,
         hdr.ipv4.ihl = hdr.ipv4.ihl + 4; // Internet Header Length.
         hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16; // adding 4 bytes 32/8 = 4
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
+
+        // MAYBE ERROR? HOW WILL IT BEHAVE IF HOST2 is not defined in controll plane?
+        if (hdr.ipv4.dstAddr == final_host1 || hdr.ipv4.dstAddr == final_host2 ){
+            
+            if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+            // remove payload because we just want the header swtraces
+            // truncate()
+            truncate((bit<32>) hdr.hdr.length + 4); 
+            hdr.ipv4.dstAddr = telemetry_host;
+
+            }else{
+                //remove all swtraces headers
+                hdr.swtraces.setInvalid();
+                hdr.mri.setInvalid();
+            }
+
+        }
+        //   "final_host1":"10.0.1.1",
+        //  "final_host2":"10.0.1.11",
+        //  "telemetry_host":"10.0.3.3"
+
+
     }
 
     table swtrace {

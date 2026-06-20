@@ -8,7 +8,10 @@
       "default_action": true,
       "action_name": "MyEgress.add_swtrace",
       "action_params": {
-         "swid": 1
+         "swid": 1,
+         "final_host1":"10.0.1.1",
+         "final_host2":"10.0.1.11",
+         "telemetry_host":"10.0.3.3"
        }
     },
     {
