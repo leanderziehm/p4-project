@@ -42,4 +42,4 @@ RUN apt-get install tmux
 RUN apt-get install -y mininet
 USER p4
 WORKDIR /p4-project
-CMD ["/bin/bash"]
+CMD ["bash", "-c", "make && exec bash"]

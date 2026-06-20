@@ -282,13 +282,13 @@ control MyEgress(inout headers hdr,
         truncate((bit<32>) hdr.ipv4.totalLen);
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
         hdr.debug.setValid();
-        hdr.debug.marker = 0xC1;   // proves: this is the clone, heading to telemetry
+        hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }
 
     action strip_telemetry_headers() {
         hdr.mri.setInvalid();
         hdr.debug.setValid();
-        hdr.debug.marker = 0xC1;   // proves: this is the clone, heading to telemetry
+        hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }
 
     table swtrace_config {

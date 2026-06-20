@@ -4,6 +4,9 @@ rundev:
 elastic:
 	cd container/elasticsearch && podman compose up
 	
+container:
+	cd container/main && make
+
 runproject:
 	cd src/project && make build && make go
 
