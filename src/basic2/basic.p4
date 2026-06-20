@@ -2,9 +2,7 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<8>  TCP_PROTOCOL = 0x06;
 const bit<16> TYPE_IPV4 = 0x800;
-const bit<19> ECN_THRESHOLD = 10;
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -20,13 +18,10 @@ header ethernet_t {
     bit<16>   etherType;
 }
 
-/*
- * TODO: split tos to two fields 6 bit diffserv and 2 bit ecn
- */
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    tos;
+    bit<8>    diffserv;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -39,6 +34,7 @@ header ipv4_t {
 }
 
 struct metadata {
+    /* empty */
 }
 
 struct headers {
@@ -51,24 +47,12 @@ struct headers {
 *************************************************************************/
 
 parser MyParser(packet_in packet,
-                  out headers hdr,
-                  inout metadata meta,
-                  inout standard_metadata_t standard_metadata) {
+                out headers hdr,
+                inout metadata meta,
+                inout standard_metadata_t standard_metadata) {
 
     state start {
-        transition parse_ethernet;
-    }
-
-    state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition select(hdr.ethernet.etherType) {
-            TYPE_IPV4: parse_ipv4;
-            default: accept;
-        }
-    }
-
-    state parse_ipv4 {
-        packet.extract(hdr.ipv4);
+        /* TODO: add parser logic */
         transition accept;
     }
 }
@@ -95,10 +79,7 @@ control MyIngress(inout headers hdr,
     }
 
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
-        standard_metadata.egress_spec = port;
-        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-        hdr.ethernet.dstAddr = dstAddr;
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        /* TODO: fill out code in action body */
     }
 
     table ipv4_lpm {
@@ -108,15 +89,17 @@ control MyIngress(inout headers hdr,
         actions = {
             ipv4_forward;
             drop;
+            NoAction;
         }
         size = 1024;
-        default_action = drop;
+        default_action = NoAction();
     }
 
     apply {
-        if (hdr.ipv4.isValid()) {
-            ipv4_lpm.apply();
-        }
+        /* TODO: fix ingress control logic
+         *  - ipv4_lpm should be applied only when IPv4 header is valid
+         */
+        ipv4_lpm.apply();
     }
 }
 
@@ -127,14 +110,7 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    apply {
-        /*
-         * TODO:
-         * - if ecn is 1 or 2
-         *   - compare standard_metadata.enq_qdepth with threshold
-         *     and set hdr.ipv4.ecn to 3 if larger
-         */
-    }
+    apply {  }
 }
 
 /*************************************************************************
@@ -142,13 +118,12 @@ control MyEgress(inout headers hdr,
 *************************************************************************/
 
 control MyComputeChecksum(inout headers hdr, inout metadata meta) {
-    apply {
-        /* TODO: replace tos with diffserve and ecn */
+     apply {
         update_checksum(
             hdr.ipv4.isValid(),
             { hdr.ipv4.version,
               hdr.ipv4.ihl,
-              hdr.ipv4.tos,
+              hdr.ipv4.diffserv,
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,
@@ -162,14 +137,14 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
     }
 }
 
+
 /*************************************************************************
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
 
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.ethernet);
-        packet.emit(hdr.ipv4);
+        /* TODO: add deparser logic */
     }
 }
 

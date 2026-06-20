@@ -2,9 +2,7 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<8>  TCP_PROTOCOL = 0x06;
 const bit<16> TYPE_IPV4 = 0x800;
-const bit<19> ECN_THRESHOLD = 10;
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -23,8 +21,7 @@ header ethernet_t {
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<6>    diffserv;
-    bit<2>    ecn;
+    bit<8>    diffserv;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -37,6 +34,7 @@ header ipv4_t {
 }
 
 struct metadata {
+    /* empty */
 }
 
 struct headers {
@@ -69,8 +67,8 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ipv4);
         transition accept;
     }
-}
 
+}
 
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
@@ -109,7 +107,7 @@ control MyIngress(inout headers hdr,
             NoAction;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = drop();
     }
 
     apply {
@@ -126,30 +124,20 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    action mark_ecn() {
-        hdr.ipv4.ecn = 3;
-    }
-    apply {
-        if (hdr.ipv4.ecn == 1 || hdr.ipv4.ecn == 2){
-            if (standard_metadata.enq_qdepth >= ECN_THRESHOLD){
-                mark_ecn();
-            }
-        }
-    }
+    apply {  }
 }
 
 /*************************************************************************
 *************   C H E C K S U M    C O M P U T A T I O N   **************
 *************************************************************************/
 
-control MyComputeChecksum(inout headers hdr, inout metadata meta) {
+control MyComputeChecksum(inout headers  hdr, inout metadata meta) {
      apply {
         update_checksum(
-            hdr.ipv4.isValid(),
+        hdr.ipv4.isValid(),
             { hdr.ipv4.version,
               hdr.ipv4.ihl,
               hdr.ipv4.diffserv,
-              hdr.ipv4.ecn,
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,
