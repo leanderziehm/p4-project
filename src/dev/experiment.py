@@ -43,14 +43,14 @@ def random_sentence():
     return random.choice(SENTENCES)
 
 
-def random_paragraph(min_sent=1, max_sent=200):
+def random_paragraph(min_sent=1, max_sent=50):
     return " ".join(
         random_sentence()
         for _ in range(random.randint(min_sent, max_sent))
     )
 
 
-def random_noise_text(min_words=3, max_words=700):
+def random_noise_text(min_words=3, max_words=30):
     return " ".join(
         random.choice(WORDS)
         for _ in range(random.randint(min_words, max_words))
