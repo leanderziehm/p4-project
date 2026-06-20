@@ -5,10 +5,9 @@
 const bit<8>  UDP_PROTOCOL = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
-https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
 
 const bit<8> BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE = 1;
-
+// https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
 // #define PKT_INSTANCE_TYPE_NORMAL 0
 // #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 // #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
