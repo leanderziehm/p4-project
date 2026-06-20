@@ -5,8 +5,18 @@
 const bit<8>  UDP_PROTOCOL = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
+https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
 
-#define MAX_HOPS 9
+const bit<8> BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE = 1;
+
+// #define PKT_INSTANCE_TYPE_NORMAL 0
+// #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
+// #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
+// #define PKT_INSTANCE_TYPE_COALESCED 3
+// #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
+// #define PKT_INSTANCE_TYPE_REPLICATION 5
+// #define PKT_INSTANCE_TYPE_RESUBMIT 6
+// #define MAX_HOPS 9
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -254,7 +264,7 @@ control MyEgress(inout headers hdr,
         // MAYBE ERROR? HOW WILL IT BEHAVE IF HOST2 is not defined in controll plane?
         if (hdr.ipv4.dstAddr == final_host1 || hdr.ipv4.dstAddr == final_host2 ){
             
-            if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+            if (standard_metadata.instance_type == BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE) {
             // remove payload because we just want the header swtraces
             // truncate()
             truncate((bit<32>) hdr.hdr.length + 4); 
