@@ -1,6 +1,9 @@
 rundev:
 	cd src/dev && make build && make run
 
+elastic:
+	cd container/elasticsearch && podman compose up
+	
 runproject:
 	cd src/project && make build && make go
 
