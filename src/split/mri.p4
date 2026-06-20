@@ -6,16 +6,17 @@ const bit<8>  UDP_PROTOCOL = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
 
-const bit<8> BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE = 1;
+// const bit<8> BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE = 1;
 // https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
 // #define PKT_INSTANCE_TYPE_NORMAL 0
-// #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
+#define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 // #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 // #define PKT_INSTANCE_TYPE_COALESCED 3
 // #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
 // #define PKT_INSTANCE_TYPE_REPLICATION 5
 // #define PKT_INSTANCE_TYPE_RESUBMIT 6
-// #define MAX_HOPS 9
+
+#define MAX_HOPS 9
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -200,6 +201,10 @@ control MyIngress(inout headers hdr,
     }
 
   table telemetry {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+
         actions = {
             clone_to_both;
         }
@@ -263,25 +268,32 @@ control MyEgress(inout headers hdr,
         // MAYBE ERROR? HOW WILL IT BEHAVE IF HOST2 is not defined in controll plane?
         if (hdr.ipv4.dstAddr == final_host1 || hdr.ipv4.dstAddr == final_host2 ){
             
-            if (standard_metadata.instance_type == BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE) {
+            if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
             // remove payload because we just want the header swtraces
             // truncate()
-            truncate((bit<32>) hdr.hdr.length + 4); 
+            truncate((bit<32>) hdr.ipv4.totalLen); 
             hdr.ipv4.dstAddr = telemetry_host;
 
             }else{
                 //remove all swtraces headers
-                hdr.swtraces.setInvalid();
                 hdr.mri.setInvalid();
+                // hdr.swtraces[0].setInvalid();
+                // hdr.swtraces[1].setInvalid();
+                // hdr.swtraces[2].setInvalid();
+                // hdr.swtraces[3].setInvalid();
+                // hdr.swtraces[4].setInvalid();
+                // hdr.swtraces[5].setInvalid();
+                // hdr.swtraces[6].setInvalid();
+                // hdr.swtraces[7].setInvalid();
+                // hdr.swtraces[8].setInvalid();
+
+                
             }
 
         }
-        //   "final_host1":"10.0.1.1",
-        //  "final_host2":"10.0.1.11",
-        //  "telemetry_host":"10.0.3.3"
-
-
     }
+
+
 
     table swtrace {
         actions = {
