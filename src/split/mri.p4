@@ -77,9 +77,17 @@ struct parser_metadata_t {
     bit<16>  remaining;
 }
 
+struct egress_metadata_t {
+    switchID_t  swid;
+    ip4Addr_t   final_host1;
+    ip4Addr_t   final_host2;
+    ip4Addr_t   telemetry_host;
+}
+
 struct metadata {
     ingress_metadata_t   ingress_metadata;
     parser_metadata_t   parser_metadata;
+    egress_metadata_t    egress_metadata;
 }
 
 struct headers {
@@ -239,73 +247,62 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-    action add_swtrace(switchID_t swid,ip4Addr_t final_host1,ip4Addr_t final_host2,ip4Addr_t telemetry_host) {
 
-        if (hdr.ipv4.dstAddr == telemetry_host){
-            //ping maybe 
-            return;
-        }
-
-        hdr.mri.count = hdr.mri.count + 1;
-        hdr.swtraces.push_front(1);
-        // According to the P4_16 spec, pushed elements are invalid, so we need
-        // to call setValid(). Older bmv2 versions would mark the new header(s)
-        // valid automatically (P4_14 behavior), but starting with version 1.11,
-        // bmv2 conforms with the P4_16 spec.
-        hdr.swtraces[0].setValid();
-        hdr.swtraces[0].swid = swid;
-        hdr.swtraces[0].qdepth = (qdepth_t)standard_metadata.deq_qdepth;
-        hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;// see docs: https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
-        hdr.swtraces[0].qtime = (qtime_t)standard_metadata.deq_timedelta; 
-
-// • the ingress timestamp
-// • the time spent in the queue
-
-        hdr.ipv4.ihl = hdr.ipv4.ihl + 4; // Internet Header Length.
-        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16; // adding 4 bytes 32/8 = 4
-        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
-
-        // MAYBE ERROR? HOW WILL IT BEHAVE IF HOST2 is not defined in controll plane?
-        if (hdr.ipv4.dstAddr == final_host1 || hdr.ipv4.dstAddr == final_host2 ){
-            
-            if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
-            // remove payload because we just want the header swtraces
-            // truncate()
-            truncate((bit<32>) hdr.ipv4.totalLen); 
-            hdr.ipv4.dstAddr = telemetry_host;
-
-            }else{
-                //remove all swtraces headers
-                hdr.mri.setInvalid();
-                // hdr.swtraces[0].setInvalid();
-                // hdr.swtraces[1].setInvalid();
-                // hdr.swtraces[2].setInvalid();
-                // hdr.swtraces[3].setInvalid();
-                // hdr.swtraces[4].setInvalid();
-                // hdr.swtraces[5].setInvalid();
-                // hdr.swtraces[6].setInvalid();
-                // hdr.swtraces[7].setInvalid();
-                // hdr.swtraces[8].setInvalid();
-
-                
-            }
-
-        }
+    action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
+                               ip4Addr_t final_host2, ip4Addr_t telemetry_host) {
+        // plain field writes -- never restricted, safe to gate this however you like
+        meta.egress_metadata.swid           = swid;
+        meta.egress_metadata.final_host1    = final_host1;
+        meta.egress_metadata.final_host2    = final_host2;
+        meta.egress_metadata.telemetry_host = telemetry_host;
     }
 
+    // Unconditional inside its own body -- never guarded by if/return here.
+    action add_swtrace() {
+        hdr.mri.count = hdr.mri.count + 1;
+        hdr.swtraces.push_front(1);
+        hdr.swtraces[0].setValid();
+        hdr.swtraces[0].swid       = meta.egress_metadata.swid;
+        hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
+        hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
+        hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
 
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
+        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
+    }
 
-    table swtrace {
-        actions = {
-            add_swtrace;
-            NoAction;
-        }
+    action redirect_clone_to_telemetry() {
+        truncate((bit<32>) hdr.ipv4.totalLen);
+        hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
+    }
+
+    action strip_telemetry_headers() {
+        hdr.mri.setInvalid();
+    }
+
+    table swtrace_config {
+        actions = { set_swtrace_config; NoAction; }
+        size = 1;
         default_action = NoAction();
     }
 
     apply {
         if (hdr.mri.isValid()) {
-            swtrace.apply();
+            swtrace_config.apply();
+
+            if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
+                add_swtrace();
+
+                if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
+                    hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
+                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+                        redirect_clone_to_telemetry();
+                    } else {
+                        strip_telemetry_headers();
+                    }
+                }
+            }
         }
     }
 }
