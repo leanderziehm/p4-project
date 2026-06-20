@@ -166,6 +166,19 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
+    // action swtraces_forward(){ // where do we define the table for the controll plane
+    //     // if(is_at_final_switch){
+    //         //copy twiche 1 for packet without telemetry header and 1 without payload
+    //     // }
+    // }
+
+    action clone_to_both() {
+        // clone session 1 -> H3 (header only)
+        clone(CloneType.I2E, 1);
+
+        // clone session 2 -> H2 (payload only)
+        clone(CloneType.I2E, 2);
+    }
 
     table ipv4_lpm {
         key = {
@@ -180,10 +193,31 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
+  table telemetry {
+        actions = {
+            clone_to_both;
+        }
+        size = 1;
+        default_action = clone_to_both();
+    }
+
+
+    // table telemetry {
+    //     key = {
+    //         hdr.swtraces.swid: lpm;//maybe pick something better then lpm? what is lpm
+    //     }
+    //     actions = {
+    //         ipv4_forward;
+    //         //drop; // we might not need it, when would we drop?????
+    //         NoAction;
+    //     }
+    // }
+
     apply {
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
         }
+        telemetry.apply();
     }
 }
 
