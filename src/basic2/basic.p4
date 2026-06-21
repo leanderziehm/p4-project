@@ -1,6 +1,9 @@
 /* -*- P4_16 -*- */
-#include <core.p4>
-#include <v1model.p4>
+#include <core.p4> // https://github.com/p4lang/p4c/blob/main/p4include/core.p4
+#include <v1model.p4> // https://github.com/p4lang/p4c/blob/main/p4include/v1model.p4
+// https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch 
+
+//Debugging: logs and custom headers clone, cloning (mirroring), digests, https://forum.p4.org/t/debugging-a-p4-code-in-general/994
 
 const bit<16> TYPE_IPV4 = 0x800;
 
@@ -15,13 +18,15 @@ typedef bit<32> ip4Addr_t;
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
-    bit<16>   etherType;
+    // 4*8= 32 bits for optional vlan header https://en.wikipedia.org/wiki/Ethernet_frame#Structure -> https://en.wikipedia.org/wiki/IEEE_802.1Q
+    bit<16>   etherType;// or 802.1Q tag 32 bits (optional)
 }
-
+// https://networklessons.com/ip-routing/ipv4-packet-header
+// https://www.elektronik-kompendium.de/sites/net/2011241.htm
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    diffserv;
+    bit<8>    tos;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -32,6 +37,9 @@ header ipv4_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
 }
+
+// Record route: Records the IP addresses of the routers through which an IP packet passes.
+// Timestamp: Records timing information.
 
 struct metadata {
     /* empty */
@@ -53,6 +61,7 @@ parser MyParser(packet_in packet,
 
     state start {
         /* TODO: add parser logic */
+         log_msg("start :) xgjku298ysahkjh basic2 MyParser");
         transition accept;
     }
 }
@@ -80,6 +89,7 @@ control MyIngress(inout headers hdr,
 
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         /* TODO: fill out code in action body */
+        log_msg("HELLO :) xgh62fnmo basic2 ipv4_forward");
     }
 
     table ipv4_lpm {
@@ -123,7 +133,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             hdr.ipv4.isValid(),
             { hdr.ipv4.version,
               hdr.ipv4.ihl,
-              hdr.ipv4.diffserv,
+              hdr.ipv4.tos,
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,

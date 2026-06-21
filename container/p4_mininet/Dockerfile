@@ -40,6 +40,8 @@ RUN ./user-common-bootstrap.sh
 # RUN echo "p4 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 RUN apt-get install tmux
 RUN apt-get install -y mininet
+RUN apt-get install -y vim
 USER p4
 WORKDIR /p4-project
-CMD ["bash", "-c", "make && exec bash"]
+CMD ["/bin/bash"]
+# CMD ["bash", "-c", "make && exec bash"]
