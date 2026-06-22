@@ -6,6 +6,34 @@
 
 // typedef can be used to make own named types 
 
+// variable types https://p4lang.github.io/p4-spec/docs/P4-16-v1.2.1.html#sec-base-types
+// baseType
+//     : BOOL
+//     | ERROR
+//     | BIT
+//     | INT
+//     | STRING
+//     | BIT '<' INTEGER '>'
+//     | INT '<' INTEGER '>'
+//     | VARBIT '<' INTEGER '>'
+//     | BIT '<' '(' expression ')' '>'
+//     | INT '<' '(' expression ')' '>'
+//     | VARBIT '<' '(' expression ')' '>'
+//     ;
+// https://p4lang.github.io/p4-spec/docs/P4-16-v1.2.1.html#sec-derived-types
+// enum
+// header
+// header stacks
+// struct
+// header_union
+// tuple
+// type specialization
+// extern
+// parser
+// control
+// package
+
+
 // https://en.wikipedia.org/wiki/Ethernet_frame#Structure
 header ethernet_t{
     bit<48> dstMac;
@@ -34,15 +62,15 @@ header ipv4_t {
 
 // a header can only contain primitive types like bit, what else?
 // struct is a collection of headers. 
-struct headers{
+struct headers_s{
 // header headers_t{
 // struct headers_t{
     ethernet_t ethernet;
     ipv4_t ipv4;
 }
 
-header meta{
-// struct meta{ // will it give compile error if not there?
+// header meta{
+struct meta_s{ // will it give compile error if not there?
     // ???
 }
 
@@ -53,14 +81,10 @@ header meta{
 
 // parser https://p4lang.github.io/p4-spec/docs/P4-16-v1.2.1.html#sec-parser-states
 // standard_metadata_t  https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
-parser MyParser(packet_in packet, out headers headers, inout meta meta, inout standard_metadata_t std_meta){
-
-
-
+parser MyParser(packet_in packet, out headers_s headers, inout meta_s meta, inout standard_metadata_t std_meta){
+// parser state can be with next transition one of: state, accept, reject 
 //state https://p4lang.github.io/p4-spec/docs/P4-16-v1.2.1.html#sec-p4-language-evolution--comparison-to-previous-versions-p4-v10v11 parser, state, control, and package.
 // start state is always named start and type state
-// parser state can be with next transition one of: state, accept, reject 
-
 //transition https://p4lang.github.io/p4-spec/docs/P4-16-v1.2.1.html#sec-transition
     state start{
         // transiton accept;
@@ -68,12 +92,56 @@ parser MyParser(packet_in packet, out headers headers, inout meta meta, inout st
     }
 }
 
+/// Verify Checksum
+//control https://p4lang.github.io/p4-spec/docs/P4-16-v1.2.1.html#sec-control
+// expecting ACTION or CONST or TABLE
+control MyVerifyChecksum(inout headers_s headers, inout meta_s meta ){
+    apply {}
+}
+
+
+
+// @pipeline
+// control Ingress<H, M>(inout H hdr,
+//                       inout M meta,
+//                       inout standard_metadata_t standard_metadata);
+// @pipeline
+// control Egress<H, M>(inout H hdr,
+//                      inout M meta,
+//                      inout standard_metadata_t standard_metadata);
+
+
+control MyIngress(inout headers_s headers, inout meta_s meta, inout standard_metadata_t standard_metadata){
+    apply{}
+}
+
+
+control MyEgress(inout headers_s headers, inout meta_s meta, inout standard_metadata_t standard_m ){
+    apply{}
+}
+
+
+/// compute checksum
+control MyComputeChecksum(inout headers_s headers, inout meta_s meta){
+    apply{}
+}
+
+/// deparser
+control MyDeparser(packet_out packet, in headers_s headers){
+    apply{}
+}
+
 
 // main
 V1Switch(
-MyParser()
+MyParser(),
+MyVerifyChecksum(),
+MyIngress(),
+MyEgress(),
+MyComputeChecksum(),
+MyDeparser()
 )main;
-
+// ComputeChecksum()
 // ; semicolons are important
 
 // main(){
@@ -83,14 +151,64 @@ MyParser()
 
 //headers DONE
 
-//#parser
-
-//ingres
-
-//#pipe
-
-//egress
-
+//#parser DONE
+//#verify checksum
+//#ingres
+// pipe
+//#egress
+//#compute checksum
 //#deparser
 
+// code reference from: line 715 in https://github.com/p4lang/p4c/blob/main/p4include/v1model.p4
+// /*
+//  * Architecture.
+//  *
+//  * M must be a struct.
+//  *
+//  * H must be a struct where every one if its members is of type
+//  * header, header stack, or header_union.
+//  */
 
+// parser Parser<H, M>(packet_in b,
+//                     out H parsedHdr,
+//                     inout M meta,
+//                     inout standard_metadata_t standard_metadata);
+
+// /*
+//  * The only legal statements in the body of the VerifyChecksum control
+//  * are: block statements, calls to the verify_checksum and
+//  * verify_checksum_with_payload methods, and return statements.
+//  */
+// control VerifyChecksum<H, M>(inout H hdr,
+//                              inout M meta);
+// @pipeline
+// control Ingress<H, M>(inout H hdr,
+//                       inout M meta,
+//                       inout standard_metadata_t standard_metadata);
+// @pipeline
+// control Egress<H, M>(inout H hdr,
+//                      inout M meta,
+//                      inout standard_metadata_t standard_metadata);
+
+// /*
+//  * The only legal statements in the body of the ComputeChecksum
+//  * control are: block statements, calls to the update_checksum and
+//  * update_checksum_with_payload methods, and return statements.
+//  */
+// control ComputeChecksum<H, M>(inout H hdr,
+//                               inout M meta);
+
+// /*
+//  * The only legal statements in the body of the Deparser control are:
+//  * calls to the packet_out.emit() method.
+//  */
+// @deparser
+// control Deparser<H>(packet_out b, in H hdr);
+
+// package V1Switch<H, M>(Parser<H, M> p,
+//                        VerifyChecksum<H, M> vr,
+//                        Ingress<H, M> ig,
+//                        Egress<H, M> eg,
+//                        ComputeChecksum<H, M> ck,
+//                        Deparser<H> dep
+//                        );

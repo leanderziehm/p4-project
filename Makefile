@@ -1,6 +1,8 @@
 run_a:
 	cd src/a && make build && make run 
 
+main container:
+	cd container/p4_mininet && make
 
 runbasic2:
 	cd src/basic2 && make build && make run
@@ -10,8 +12,7 @@ rundev:
 elastic:
 	cd container/elasticsearch && podman compose up
 	
-container:
-	cd container/p4_mininet && make
+
 
 runproject:
 	cd src/project && make build && make go
