@@ -3,5 +3,33 @@
   "p4info": "build/a.p4.p4info.txt",
   "bmv2_json": "build/a.json",
   "table_entries": [
+        {
+      "table": "MyIngress.forward",
+      "default_action": true,
+      "action_name": "MyIngress.drop",
+      "action_params": { }
+    },
+    {
+      "table": "MyIngress.forward",
+      "match": {
+        "headers.ipv4.dstIp": ["10.0.1.2",32]
+      },
+      "action_name": "MyIngress.forward_ipv4_packet",
+      "action_params": {
+        "newMac": "08:00:00:00:00:02",
+        "ethernetEgressPort": 2
+      }
+    },
+    {
+      "table": "MyIngress.forward",
+      "match": {
+        "headers.ipv4.dstIp": ["10.0.1.1",32]
+      },
+      "action_name": "MyIngress.forward_ipv4_packet",
+      "action_params": {
+        "newMac": "08:00:00:00:00:01",
+        "ethernetEgressPort": 1
+      }
+    }
   ]
 }
