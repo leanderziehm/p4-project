@@ -19,7 +19,7 @@ header ipv4_t {
     bit<8> protocol;
     bit<16> headerChecksum;
     bit<32> srcIp;
-    bit<32> dstIp;
+    bit<32> dstAddr;
     // bit<32> options; 0 - 320 in chunks of 32
 }
 // a header can only contain primitive types like bit, what else?
@@ -96,13 +96,13 @@ control MyIngress(inout headers_s hdr, inout meta_s meta, inout standard_metadat
     }
 
 // "10.0.1.2/31"
-    action forward_ipv4_packet(bit<48> newMac,bit<9> ethernetEgressPort){//port standard metadata????
+    action ipv4_forward(bit<48> newMac,bit<9> ethernetEgressPort){//port standard metadata????
         // https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
         // headers.ipv4.ttl = 69;// headers.ipv4.ttl - 1;
-        headers.ipv4.ttl = headers.ipv4.ttl - 1;
-        headers.ethernet.srcMac = headers.ethernet.dstMac; //whats the point of setting this? for path traversal?
-        headers.ethernet.dstMac = newMac;
-        log_msg("ttl={}",{headers.ipv4.ttl});
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        hdr.ethernet.srcMac = hdr.ethernet.dstMac; //whats the point of setting this? for path traversal?
+        hdr.ethernet.dstMac = newMac;
+        log_msg("ttl={}",{hdr.ipv4.ttl});
         standard_metadata.egress_spec = ethernetEgressPort;//https://github.com/p4lang/p4c/blob/main/p4include/v1model.p4 and https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
     }
 
@@ -115,7 +115,7 @@ control MyIngress(inout headers_s hdr, inout meta_s meta, inout standard_metadat
         }//no commas here
 
         actions = {
-            forward_ipv4_packet;// semicolons in object here
+            ipv4_forward;// semicolons in object here
             drop;
             NoAction;//do we need this?
         }
@@ -124,8 +124,8 @@ control MyIngress(inout headers_s hdr, inout meta_s meta, inout standard_metadat
 
     apply{
         // forward.apply();
-        if (headers.ipv4.isValid()){ // !! impoartant check if header is valid that key depends on
-            forward.apply();
+        if (hdr.ipv4.isValid()){ // !! impoartant check if header is valid that key depends on
+            ipv4_lpm.apply();
         }
     }
 }
@@ -153,7 +153,7 @@ control MyComputeChecksum(inout headers_s headers, inout meta_s meta){
               headers.ipv4.ttl,
               headers.ipv4.protocol,
               headers.ipv4.srcIp,
-              headers.ipv4.dstIp },
+              headers.ipv4.dstAddr },
             headers.ipv4.headerChecksum,
             HashAlgorithm.csum16);
     }

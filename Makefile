@@ -1,3 +1,14 @@
+run_basic4:
+	cd src/basic4 && make build && make run 
+
+
+run_basic3:
+	cd src/basic3 && make build && make run 
+
+
+run_b:
+	cd src/b && make build && make run 
+
 run_a:
 	cd src/a && make build && make run 
 
