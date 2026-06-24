@@ -9,29 +9,24 @@ header ethernet_t{
 header ipv4_t {
     bit<4> version; 
     bit<4> internetHeaderLengthIHL; 
-    bit<6> dscpDiffserfQoS; //give different prio CS0 CS7 AF EF  https://www.iana.org/assignments/dscp-registry/dscp-registry.xhtml
-    bit<2> ecnExplicitCongestionNotificationQoS; // slower sending
+    bit<6> dscpDiffserfQoS; 
+    bit<2> ecnExplicitCongestionNotificationQoS; 
     bit<16> totalLenght;
     bit<16> fragmentID;
-    bit<3> flags;//1: unused, 1: dont fragment, 1: more fragments coming,
+    bit<3> flags;
     bit<13> fragmentOffset;
     bit<8> ttl;
     bit<8> protocol;
     bit<16> headerChecksum;
     bit<32> srcIp;
     bit<32> dstAddr;
-    // bit<32> options; 0 - 320 in chunks of 32
 }
-// a header can only contain primitive types like bit, what else?
-// struct is a collection of headers. 
 struct headers_s{
     ethernet_t ethernet;
     ipv4_t ipv4;
 }
 
-// header meta{
-struct meta_s{ // will it give compile error if not there?
-    // ???
+struct meta_s{ 
 }
 
 parser MyParser(packet_in packet, out headers_s headers, inout meta_s meta, inout standard_metadata_t standard_metadata){
@@ -49,40 +44,10 @@ parser MyParser(packet_in packet, out headers_s headers, inout meta_s meta, inou
     }
 
     state parse_ipv4 {
-        packet.extract(headers.ipv4);
-        transition accept;
-    }
-
-
-
-    state start2{
-        packet.extract(headers.ethernet);//what if its not valid??
-        log_msg("dst={} src={} etherTypeOrLength={}",{headers.ethernet.dstMac, headers.ethernet.srcMac,headers.ethernet.etherTypeOrLength});
-        transition select(headers.ethernet.etherTypeOrLength){
-            // codes from https://en.wikipedia.org/wiki/EtherType
-            0x0800:parse_ipv4;//add semicolon no ,
-            default: accept; 
-        }// implicitly reject all other states.
- }
-   
-    state parse_ipv42 {
         log_msg("ipv4");
         packet.extract(headers.ipv4);
         transition accept;
     }
-    state parse_arp {
-        log_msg("arp");
-        transition reject;// EXPLICIT REJECT FOR SOME REASON NOT ALLOWED IN BMV2
-    }
-    state parse_ipv6 {
-        log_msg("ipv6");
-        transition reject;// EXPLICIT REJECT FOR SOME REASON NOT ALLOWED IN BMV2
-    }
-     state parse_vlanTag{
-        log_msg("vlanTag");
-        transition reject;// EXPLICIT REJECT FOR SOME REASON NOT ALLOWED IN BMV2
-     }
-
 }
 
 control MyVerifyChecksum(inout headers_s headers, inout meta_s meta ){
@@ -90,55 +55,44 @@ control MyVerifyChecksum(inout headers_s headers, inout meta_s meta ){
 }
 
 control MyIngress(inout headers_s hdr, inout meta_s meta, inout standard_metadata_t standard_metadata){
-    //tables and actions
     action drop(){
         mark_to_drop(standard_metadata);
     }
 
-// "10.0.1.2/31"
-    action ipv4_forward(bit<48> newMac,bit<9> ethernetEgressPort){//port standard metadata????
-        // https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
-        // headers.ipv4.ttl = 69;// headers.ipv4.ttl - 1;
+    action ipv4_forward(bit<48> newMac,bit<9> ethernetEgressPort){
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         hdr.ethernet.srcMac = hdr.ethernet.dstMac; //whats the point of setting this? for path traversal?
         hdr.ethernet.dstMac = newMac;
         log_msg("ttl={}",{hdr.ipv4.ttl});
-        standard_metadata.egress_spec = ethernetEgressPort;//https://github.com/p4lang/p4c/blob/main/p4include/v1model.p4 and https://github.com/p4lang/behavioral-model/blob/main/docs/simple_switch.md
+        standard_metadata.egress_spec = ethernetEgressPort;
     }
 
-    // https://github.com/p4lang/p4c/blob/main/p4include/v1model.p4
-    
     table ipv4_lpm{
         key = {
             hdr.ipv4.dstAddr: lpm;
-            // headers.ipv4.dstIp:lpm; // longest prefix match https://en.wikipedia.org/wiki/Longest_prefix_match //lms//longest matching sequence
-        }//no commas here
+        }
 
         actions = {
-            ipv4_forward;// semicolons in object here
+            ipv4_forward;
             drop;
-            NoAction;//do we need this?
+            NoAction;
         }
-        default_action = drop; //() or no?JJ
+        default_action = drop; 
     }
 
     apply{
-        // forward.apply();
-        if (hdr.ipv4.isValid()){ // !! impoartant check if header is valid that key depends on
+        if (hdr.ipv4.isValid()){ 
             ipv4_lpm.apply();
         }
     }
 }
 
-
 control MyEgress(inout headers_s headers, inout meta_s meta, inout standard_metadata_t standard_m ){
-    apply{}//? what is the difference between ingress and egress? any new features?
+    apply{}
 }
 
-
-/// compute checksum
 control MyComputeChecksum(inout headers_s headers, inout meta_s meta){
-    apply{//}
+    apply{
 
      update_checksum(
             headers.ipv4.isValid(),
@@ -159,7 +113,6 @@ control MyComputeChecksum(inout headers_s headers, inout meta_s meta){
     }
 }
 
-/// deparser
 control MyDeparser(packet_out packet, in headers_s headers){
     apply{
         packet.emit(headers.ethernet);
@@ -167,8 +120,6 @@ control MyDeparser(packet_out packet, in headers_s headers){
     }
 }
 
-
-// main
 V1Switch(
 MyParser(),
 MyVerifyChecksum(),

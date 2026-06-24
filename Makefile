@@ -1,3 +1,13 @@
+run_b:
+	cd src/b && make build && make run
+
+
+run_project:
+	cd src/project && make build && make go
+
+mri2:
+	cd src/mri2 && make build && make run
+
 
 
 run_load_balance:
@@ -37,8 +47,6 @@ elastic:
 	
 
 
-runproject:
-	cd src/project && make build && make go
 
 runmri:
 	cd src/mri && make build && make go
