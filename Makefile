@@ -1,6 +1,7 @@
+run_aa_clone:
+	cd src/aa_clone && make build && make run
 run_aa:
 	cd src/aa && make build && make run
-
 
 run_multicast_simple:
 	cd src/multicast_simple && make build && make run
