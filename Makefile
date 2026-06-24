@@ -1,3 +1,12 @@
+
+
+run_basic_custom_header:
+	cd src/basic_custom_header && make build && make run
+
+
+run_basic:
+	cd src/basic && make build && make run
+
 run_b:
 	cd src/b && make build && make run
 
