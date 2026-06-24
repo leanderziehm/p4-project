@@ -27,10 +27,14 @@ header ipv4_t {
     bit<3>    flags;
     bit<13>   fragOffset;
     bit<8>    ttl;
-    bit<8>    protocol;
+    bit<8>    protocol;//debug 
     bit<16>   hdrChecksum;
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
+}
+
+header debug_t {
+    bit<32>  debugValue;
 }
 
 struct metadata {
@@ -40,6 +44,7 @@ struct metadata {
 struct headers {
     ethernet_t   ethernet;
     ipv4_t       ipv4;
+    debug_t     debug;
 }
 
 /*************************************************************************
@@ -66,7 +71,13 @@ parser MyParser(packet_in packet,
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
         transition accept;
+        // transition parse_debug;
     }
+
+    // state parse_debug {
+    //     packet.extract(hdr.debug);
+    //     transition accept;
+    // }
 
 }
 
@@ -95,6 +106,9 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+        hdr.debug.setValid();
+        // hdr.debug.debugValue = (bit<32>) 0x74657374; // spells out: test
+        hdr.debug.debugValue = (bit<32>) 0x54534554; // spells out: TEST
     }
 
     table ipv4_lpm {
@@ -159,6 +173,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
+        packet.emit(hdr.debug);
     }
 }
 

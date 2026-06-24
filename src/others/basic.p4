@@ -34,7 +34,7 @@ header ipv4_t {
 }
 
 header debug_t {
-    bit<8>  debugValue;
+    bit<32>  debugValue;
 }
 
 struct metadata {
@@ -107,8 +107,8 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
         hdr.debug.setValid();
-        hdr.debug.debugValue = (bit<8>) 3;
-        hdr.ipv4.totalLen =  hdr.ipv4.totalLen + 1;
+        // hdr.debug.debugValue = (bit<32>) 0x54455354;
+        hdr.debug.debugValue = (bit<32>) 0x74657374;
     }
 
     table ipv4_lpm {
