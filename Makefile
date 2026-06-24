@@ -1,3 +1,13 @@
+run_aa:
+	cd src/aa && make build && make run
+
+
+run_multicast_simple:
+	cd src/multicast_simple && make build && make run
+
+run_multicast:
+	cd src/multicast && make build && make run
+
 run_basic_clone:
 	cd src/basic_clone && make build && make run
 
