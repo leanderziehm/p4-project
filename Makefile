@@ -1,3 +1,6 @@
+mri_simple:
+	cd src/mri_simple && make build && make run
+
 run_aa_clone:
 	cd src/aa_clone && make build && make run
 run_aa:
