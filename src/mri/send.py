@@ -35,7 +35,7 @@ def get_if():
 
 class SwitchTrace(Packet):
     fields_desc = [ IntField("swid", 0),
-                  IntField("qdepth", 0),IntField("ingress_ts", 0),IntField("qtime",0)]
+                  IntField("qdepth", 0)]
     def extract_padding(self, p):
                 return "", p
 

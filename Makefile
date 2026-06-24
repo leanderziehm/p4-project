@@ -1,3 +1,15 @@
+
+
+run_load_balance:
+	cd src/load_balance && make build && make run 
+
+
+run_linkmonitor:
+	cd src/link_monitor && make build && make run 
+
+run_calc:
+	cd src/calc && make build && make run 
+
 run_basic4:
 	cd src/basic4 && make build && make run 
 
