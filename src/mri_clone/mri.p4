@@ -2,7 +2,9 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<8>  UDP_PROTOCOL = 0x11;
+const bit<8>  PROTOCOL_ICMP = 0x01;
+const bit<8>  PROTOCOL_TCP = 0x07;
+const bit<8>  PROTOCOL_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
 
@@ -38,6 +40,13 @@ header ipv4_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
 }
+header icmp_t {
+    bit<8> type;
+    bit<8> subtype;
+    bit<16> checksum;
+    bit<32> variable;
+
+}
 
 header ipv4_option_t {
     bit<1> copyFlag;
@@ -48,6 +57,7 @@ header ipv4_option_t {
 
 header mri_t {
     bit<16>  count;
+    // bit<16>  debug;
 }
 
 header switch_t {
@@ -72,6 +82,7 @@ struct headers {
     ethernet_t         ethernet;
     ipv4_t             ipv4;
     ipv4_option_t      ipv4_option;
+    // icmp_t             icmp;
     mri_t              mri;
     switch_t[MAX_HOPS] swtraces;
 }
@@ -94,13 +105,27 @@ parser MyParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
-            TYPE_IPV4: parse_ipv4;
+            TYPE_IPV4: parse_ipv4_protocol;
             default: accept;
         }
     }
 
-    state parse_ipv4 {
+    state parse_ipv4_protocol {
+        // log_msg("parse_ipv4");
         packet.extract(hdr.ipv4);
+
+        transition select(hdr.ipv4.protocol){
+            // PROTOCOL_ICMP: parse_icmp;
+            PROTOCOL_TCP: parse_tcp;
+            PROTOCOL_UDP: parse_udp;
+            default: accept;
+        }
+
+
+    }
+
+    state parse_ipv4_ihl {
+
         verify(hdr.ipv4.ihl >= 5, error.IPHeaderTooShort);
         transition select(hdr.ipv4.ihl) {
             5             : accept;
@@ -109,6 +134,7 @@ parser MyParser(packet_in packet,
     }
 
     state parse_ipv4_option {
+        log_msg("parse_ipv4_option");
         packet.extract(hdr.ipv4_option);
         transition select(hdr.ipv4_option.option) {
             IPV4_OPTION_MRI: parse_mri;
@@ -117,6 +143,7 @@ parser MyParser(packet_in packet,
     }
 
     state parse_mri {
+        // log_msg("parse_mri");
         packet.extract(hdr.mri);
         meta.parser_metadata.remaining = hdr.mri.count;
         transition select(meta.parser_metadata.remaining) {
@@ -126,12 +153,26 @@ parser MyParser(packet_in packet,
     }
 
     state parse_swtrace {
+        // log_msg("parse_swtrace");
         packet.extract(hdr.swtraces.next);
         meta.parser_metadata.remaining = meta.parser_metadata.remaining  - 1;
         transition select(meta.parser_metadata.remaining) {
             0 : accept;
             default: parse_swtrace;
         }
+    }
+
+    // state parse_icmp{
+    //     packet.extract(hdr.icmp);
+    //     transition parse_ipv4_ihl;
+    // }
+
+    state parse_tcp{
+        transition parse_ipv4_ihl;
+    }
+
+    state parse_udp{
+        transition parse_ipv4_ihl;
     }
 }
 
@@ -161,6 +202,14 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+
+        // clone(CloneType.I2E,1,(bit<32>)1);       
+        // clone(CloneType.I2E,(bit<32>)99);       
+        clone_preserving_field_list(CloneType.I2E,(bit<32>)99,(bit<8>)1);       
+        // extern void clone(in CloneType type, in bit<32> session);
+        // extern void clone_preserving_field_list(in CloneType type, in bit<32> session, bit<8> index);
+// 
+        // log_msg("ipv4_forward");
     }
 
     table ipv4_lpm {
@@ -191,6 +240,7 @@ control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
     action add_swtrace(switchID_t swid) {
+        log_msg("add_swtrace");
         hdr.mri.count = hdr.mri.count + 1;
         hdr.swtraces.push_front(1);
         // According to the P4_16 spec, pushed elements are invalid, so we need
@@ -214,10 +264,58 @@ control MyEgress(inout headers hdr,
         default_action = NoAction();
     }
 
+    // register<bit<32>>(128) myReg;
+
+
     apply {
-        if (hdr.mri.isValid()) {
-            swtrace.apply();
+
+        // if (standard_metadata.i)
+
+        if (hdr.ipv4.isValid()){
+        log_msg("my standard_metadata.instance_type={}",{standard_metadata.instance_type});
+                    if (standard_metadata.instance_type == 0){
+                        log_msg("PKT_INSTANCE_TYPE_INGRESS_CLONE found!");
+                        standard_metadata.egress_port = 3;
+                    }
         }
+      
+
+       
+
+        if (hdr.mri.isValid()) {
+            // log_msg("mri is valid");
+            swtrace.apply();
+            // bit<32> regID = 0;
+            // bit<32> regVal = 0;
+            // log_msg("before_regVal={}",{regVal});
+            // myReg.read(regVal, (bit<32>)regID);
+            // log_msg("after_regVal={}",{regVal});
+            // myReg.write((bit<32>)regID, (bit<32>)regVal+1);
+
+            // if (regVal > 10){
+                // log_msg("regVal={} is over 10",{regVal});
+                // hdr.ipv4.protocol = (bit<8>) 88;
+            // }
+
+            // if (regVal % 2 == 0){
+                // log_msg("regVal={} is even",{regVal});
+                // hdr.ipv4.protocol = (bit<8>) 88;
+            // }
+        }
+
+        // hdr.ipv4_option.setValid();
+        // hdr.mri.setValid();
+        // hdr.ipv4.setValid();
+        // hdr.ipv4.ihl = (bit<4>) 6;
+        // hdr.ipv4.ttl = (bit<8>) 8;
+        // hdr.ipv4.totalLen = hdr.ipv4.totalLen + 32;//16;
+        // hdr.ipv4.totalLen = hdr.ipv4.totalLen + 32;//16;
+        // hdr.ipv4.totalLen = hdr.ipv4.totalLen -4 ;//16;
+        // log_msg("hdr.ipv4_option");
+        
+
+       
+
     }
 }
 
@@ -242,6 +340,10 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
               hdr.ipv4.dstAddr },
             hdr.ipv4.hdrChecksum,
             HashAlgorithm.csum16);
+
+
+        // update_checksum(hdr.icmp.isValid(), {hdr.icmp.type,hdr.icmp.subtype,hdr.icmp.variable},hdr.icmp.checksum, HashAlgorithm.csum16);
+        // Checksum: 0x3d6a incorrect, should be 0x0729
     }
 }
 
