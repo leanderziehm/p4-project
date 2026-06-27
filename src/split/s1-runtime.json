@@ -59,5 +59,17 @@
         "port": 4
       }
     }
+  ],
+    "clone_session_entries": [
+    {
+      "clone_session_id": 99,
+      "replicas": [
+        {
+          "egress_port": 3,
+          "instance": 1
+        }
+      ],
+      "packet_length_bytes": 0
+    }
   ]
 }

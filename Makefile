@@ -1,5 +1,11 @@
+
+
 mri_clone:
 	cd src/mri_clone && make build && make run
+split:
+	cd src/split && make build && make run
+
+
 mri_simple:
 	cd src/mri_simple && make build && make run
 run_aa_clone:

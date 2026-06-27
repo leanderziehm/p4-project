@@ -239,6 +239,9 @@ control MyIngress(inout headers hdr,
     // }
 
     apply {
+
+        clone_preserving_field_list(CloneType.I2E,(bit<32>)99,(bit<8>)1);   
+
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
         }
