@@ -12,7 +12,7 @@ from scapy.all import (
     sniff
 )
 from scapy.layers.inet import _IPOption_HDR
-
+from log_packet import log_packet # +
 
 def get_if():
     ifs=get_if_list()
@@ -27,8 +27,18 @@ def get_if():
     return iface
 
 class SwitchTrace(Packet):
+    
     fields_desc = [ IntField("swid", 0),
-                  IntField("qdepth", 0)]
+                  IntField("qdepth", 0)]# +
+    
+#   fields_desc = [
+#         IntField("swid", 0),
+#         IntField("qdepth", 0),
+#         IntField("ingress_ts", 0),
+#         IntField("qtime", 0),
+#         IntField("pkt_len", 0)
+#     ]
+
     def extract_padding(self, p):
                 return "", p
 
@@ -48,6 +58,7 @@ class IPOption_MRI(IPOption):
 def handle_pkt(pkt):
     print("got a packet")
     pkt.show2()
+    log_packet(pkt) # +
 #    hexdump(pkt)
     sys.stdout.flush()
 
