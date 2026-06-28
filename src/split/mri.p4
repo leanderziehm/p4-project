@@ -85,6 +85,7 @@ struct egress_metadata_t {
     ip4Addr_t   final_host1;
     ip4Addr_t   final_host2;
     ip4Addr_t   telemetry_host;
+    qtime_t     ecn_threshold;
 }
 
 struct metadata {
@@ -196,9 +197,8 @@ control MyIngress(inout headers hdr,
     //     // }
     // }
 
-    action clone_to_both() {
-        // clone session 1 -> H3 (header only)
-        clone(CloneType.I2E, 1);
+    action do_clone() {
+        clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
     }
 
     table ipv4_lpm {
@@ -214,38 +214,23 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
-  table telemetry {
+    table last_hop {
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
-
         actions = {
-            clone_to_both;
+            do_clone;
+            NoAction;
         }
-        size = 1;
-        default_action = clone_to_both();
+        size = 64;
+        default_action = NoAction();
     }
 
-
-    // table telemetry {
-    //     key = {
-    //         hdr.swtraces.swid: lpm;//maybe pick something better then lpm? what is lpm
-    //     }
-    //     actions = {
-    //         ipv4_forward;
-    //         //drop; // we might not need it, when would we drop?????
-    //         NoAction;
-    //     }
-    // }
-
     apply {
-
-        clone_preserving_field_list(CloneType.I2E,(bit<32>)99,(bit<8>)1);   
-
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
+            last_hop.apply();
         }
-        telemetry.apply();
     }
 }
 
@@ -258,12 +243,13 @@ control MyEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata) {
 
     action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
-                               ip4Addr_t final_host2, ip4Addr_t telemetry_host) {
-        // plain field writes -- never restricted, safe to gate this however you like
+                               ip4Addr_t final_host2, ip4Addr_t telemetry_host,
+                               qtime_t ecn_threshold) {
         meta.egress_metadata.swid           = swid;
         meta.egress_metadata.final_host1    = final_host1;
         meta.egress_metadata.final_host2    = final_host2;
         meta.egress_metadata.telemetry_host = telemetry_host;
+        meta.egress_metadata.ecn_threshold  = ecn_threshold;
     }
 
     // Unconditional inside its own body -- never guarded by if/return here.
@@ -275,6 +261,10 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
         hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
+
+        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold) {
+            hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
+        }
 
         hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
         hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
@@ -295,8 +285,11 @@ control MyEgress(inout headers hdr,
     }
 
     table swtrace_config {
+        key = {
+            standard_metadata.egress_port: exact;
+        }
         actions = { set_swtrace_config; NoAction; }
-        size = 1;
+        size = 64;
         default_action = NoAction();
     }
 
