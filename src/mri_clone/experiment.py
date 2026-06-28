@@ -13,7 +13,8 @@ def load_ips_from_topology(path="topology.json"):
     hosts = []
     for name, data in topo["hosts"].items():
         ip = data["ip"].split("/")[0]
-        hosts.append((name, ip))
+        # hosts.append((name, ip))
+        hosts.append(ip)
 
     return hosts
 
@@ -67,6 +68,7 @@ def generate_payload():
 
 def validate_ips(ips):
     valid_ips = load_ips_from_topology("topology.json")
+    print(f"valid_ips: {valid_ips}")
 
     if not ips:
         print("No hosts ips found in topology.json")
@@ -90,7 +92,8 @@ EXPERIMENTS = [
 
 def main():
 
-    SEND_TO_HOSTS = ["10.0.1.1","10.0.2.2"]
+    # SEND_TO_HOSTS = ["10.0.1.1","10.0.2.2"]
+    SEND_TO_HOSTS = ["10.0.2.2"]
     TELEMETRY_HOST = "10.0.3.3"
 
     validate_ips([*SEND_TO_HOSTS,TELEMETRY_HOST])
