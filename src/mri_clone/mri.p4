@@ -31,7 +31,9 @@ header ethernet_t {
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    diffserv;
+    // bit<8>    diffserv;
+    bit<6>    dscp;
+    bit<2>    ecn;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -242,8 +244,8 @@ control MyIngress(inout headers hdr,
 
 control MyEgress(inout headers hdr,
                  inout metadata meta,
-                 inout standard_metadata_t standard_metadata) {
-    action add_swtrace(switchID_t swid) {
+                 inout standard_metadata_t standard_metadata) {                
+    action add_swtrace(switchID_t swid, bit<32> ecn_threshold, ip4Addr_t telemetry_host) {
         log_msg("add_swtrace");
         hdr.mri.count = hdr.mri.count + 1;
         hdr.swtraces.push_front(1);
@@ -261,6 +263,10 @@ control MyEgress(inout headers hdr,
         hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
         hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
+
+        if (standard_metadata.deq_timedelta > ecn_threshold) {
+            hdr.ipv4.ecn = 0x03;
+        }
     }
 
     table swtrace {
@@ -275,56 +281,30 @@ control MyEgress(inout headers hdr,
 
 
     apply {
-
-        // if (standard_metadata.i)
-
-        if (hdr.ipv4.isValid()){
-        log_msg("my standard_metadata.instance_type={}",{standard_metadata.instance_type});
-                    if (standard_metadata.instance_type == 0){
-                        log_msg("PKT_INSTANCE_TYPE_INGRESS_CLONE found!");
-                        standard_metadata.egress_port = 3;
-                    }
-        }
-      
-
-       
-
         if (hdr.mri.isValid()) {
-            // log_msg("mri is valid");
             swtrace.apply();
-            // bit<32> regID = 0;
-            // bit<32> regVal = 0;
-            // log_msg("before_regVal={}",{regVal});
-            // myReg.read(regVal, (bit<32>)regID);
-            // log_msg("after_regVal={}",{regVal});
-            // myReg.write((bit<32>)regID, (bit<32>)regVal+1);
-
-            // if (regVal > 10){
-                // log_msg("regVal={} is over 10",{regVal});
-                // hdr.ipv4.protocol = (bit<8>) 88;
-            // }
-
-            // if (regVal % 2 == 0){
-                // log_msg("regVal={} is even",{regVal});
-                // hdr.ipv4.protocol = (bit<8>) 88;
-            // }
         }
-
-        // hdr.ipv4_option.setValid();
-        // hdr.mri.setValid();
-        // hdr.ipv4.setValid();
-        // hdr.ipv4.ihl = (bit<4>) 6;
-        // hdr.ipv4.ttl = (bit<8>) 8;
-        // hdr.ipv4.totalLen = hdr.ipv4.totalLen + 32;//16;
-        // hdr.ipv4.totalLen = hdr.ipv4.totalLen + 32;//16;
-        // hdr.ipv4.totalLen = hdr.ipv4.totalLen -4 ;//16;
-        // log_msg("hdr.ipv4_option");
-        
-
-       
-
     }
-}
+
+    // apply {
+        // log_msg("standard_metadata.instance_type={}",{standard_metadata.instance_type });
+        // if (hdr.mri.isValid()) {
+            // swtrace_config.apply();
+
+            // if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
+                // add_swtrace();
+
+                //  if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+                //         log_msg("I got called standard_metadata.instance_type={}", {standard_metadata.instance_type});
+                //         redirect_clone_to_telemetry();
+                //     } else {
+                //          log_msg("else strip_telemetry_headers standard_metadata.instance_type={}", {standard_metadata.instance_type});
+                //         strip_telemetry_headers();
+                //     }
+//             }
+//         }
+//     }
+// }
 
 /*************************************************************************
 *************   C H E C K S U M    C O M P U T A T I O N   **************
