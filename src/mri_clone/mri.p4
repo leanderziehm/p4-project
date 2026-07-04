@@ -215,7 +215,15 @@ control MyIngress(inout headers hdr,
     action do_clone() {
         clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
         hdr.mri.setInvalid();
-        // hdr.swtraces.setInvalid();
+        hdr.swtraces[0].setInvalid();
+        hdr.swtraces[1].setInvalid();
+        hdr.swtraces[2].setInvalid();
+        hdr.swtraces[3].setInvalid();
+        hdr.swtraces[4].setInvalid();
+        hdr.swtraces[5].setInvalid();
+        hdr.swtraces[6].setInvalid();
+        hdr.swtraces[7].setInvalid();
+        hdr.swtraces[8].setInvalid();
         // can we remove it here or will it also remove the header from the clone?
     }
 
