@@ -297,7 +297,7 @@ control MyEgress(inout headers hdr,
     }
 
     apply {
-        log_msg("PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
+        log_msg("standard_metadata.instance_type={}",{standard_metadata.instance_type });
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
 
@@ -307,10 +307,10 @@ control MyEgress(inout headers hdr,
                 if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
                     hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
                     if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
-                        log_msg("I got called PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
+                        log_msg("I got called standard_metadata.instance_type={}", {standard_metadata.instance_type});
                         redirect_clone_to_telemetry();
                     } else {
-                        log_msg("else strip_telemetry_headers PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
+                         log_msg("else strip_telemetry_headers standard_metadata.instance_type={}", {standard_metadata.instance_type});
                         strip_telemetry_headers();
                     }
                 }
@@ -329,7 +329,8 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             hdr.ipv4.isValid(),
             { hdr.ipv4.version,
               hdr.ipv4.ihl,
-              hdr.ipv4.diffserv,
+              hdr.ipv4.dscp,
+              hdr.ipv4.ecn,
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,
