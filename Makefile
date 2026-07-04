@@ -1,9 +1,11 @@
-
+split:
+	cd src/split && make build && make run
 
 mri_clone:
 	cd src/mri_clone && make build && make run
-split:
-	cd src/split && make build && make run
+
+main container:
+	cd container/p4_mininet && make
 
 
 mri_simple:
@@ -28,7 +30,7 @@ run_basic_custom_header:
 run_basic:
 	cd src/basic && make build && make run
 
-run_b:
+run_b2:
 	cd src/b && make build && make run
 
 
@@ -63,9 +65,6 @@ run_b:
 
 run_a:
 	cd src/a && make build && make run 
-
-main container:
-	cd container/p4_mininet && make
 
 runbasic2:
 	cd src/basic2 && make build && make run
