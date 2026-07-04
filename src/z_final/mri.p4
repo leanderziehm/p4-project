@@ -36,10 +36,13 @@ header ethernet_t {
     bit<16>   etherType;
 }
 
+// https://en.wikipedia.org/wiki/IPv4#Header
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    diffserv;
+    // bit<8>    diffserv;
+    bit<6>    dscp;
+    bit<2>    ecn;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -263,7 +266,7 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
 
         if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold) {
-            hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
+            hdr.ipv4.ecn = 0x03; // todo test if works //11;//0x01; //.diffserv = hdr.ipv4.diffserv | 0x03;
         }
 
         hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
@@ -294,6 +297,7 @@ control MyEgress(inout headers hdr,
     }
 
     apply {
+        msg_log("PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
 
@@ -303,8 +307,10 @@ control MyEgress(inout headers hdr,
                 if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
                     hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
                     if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+                        msg_log("I got called PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
                         redirect_clone_to_telemetry();
                     } else {
+                        msg_log("else strip_telemetry_headers PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
                         strip_telemetry_headers();
                     }
                 }

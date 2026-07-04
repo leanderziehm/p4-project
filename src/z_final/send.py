@@ -56,16 +56,25 @@ class IPOption_MRI(IPOption):
 def main():
 
     if len(sys.argv)<3:
-        print('pass 2 arguments: <destination> "<message>"')
+        print('pass at least the first 2 arguments: <ip> "<message>" (packet_amount) (packet_interval) ')
         exit(1)
 
-    addr = socket.gethostbyname(sys.argv[1])
+
+    ip = sys.argv[1]
+    message = sys.argv[2]
+    packet_amount = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+    packet_interval = float(sys.argv[4]) if len(sys.argv) > 4 else 1.0
+    print(f"ip={ip} message={message} packet_amount={packet_amount} packet_interval={packet_interval}")
+
+    addr = socket.gethostbyname(ip)
     iface = get_if()
 
     pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / IP(
         dst=addr, options = IPOption_MRI(count=0,
             swtraces=[])) / UDP(
-            dport=4321, sport=1234) / sys.argv[2]
+            dport=4321, sport=1234) / message
+    
+
 
  #   pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / IP(
  #       dst=addr, options = IPOption_MRI(count=2,
@@ -74,9 +83,9 @@ def main():
     pkt.show2()
     #hexdump(pkt)
     try:
-      for i in range(int(sys.argv[3])):
+      for i in range(packet_amount):
         sendp(pkt, iface=iface)
-        sleep(1)
+        sleep(packet_interval)
     except KeyboardInterrupt:
         raise
 
