@@ -1,3 +1,6 @@
+final:
+	cd src/z_final && make build && make run
+
 split:
 	cd src/split && make build && make run
 

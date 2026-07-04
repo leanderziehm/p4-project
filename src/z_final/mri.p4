@@ -297,7 +297,7 @@ control MyEgress(inout headers hdr,
     }
 
     apply {
-        msg_log("PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
+        log_msg("PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
 
@@ -307,10 +307,10 @@ control MyEgress(inout headers hdr,
                 if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
                     hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
                     if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
-                        msg_log("I got called PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
+                        log_msg("I got called PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
                         redirect_clone_to_telemetry();
                     } else {
-                        msg_log("else strip_telemetry_headers PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
+                        log_msg("else strip_telemetry_headers PKT_INSTANCE_TYPE_INGRESS_CLONE", {PKT_INSTANCE_TYPE_INGRESS_CLONE});
                         strip_telemetry_headers();
                     }
                 }
