@@ -38,9 +38,6 @@ class SwitchTrace(Packet):
         IntField("qtime", 0),
     ]
     
-
-    
-
     def extract_padding(self, p):
                 return "", p
 
@@ -60,7 +57,9 @@ class IPOption_MRI(IPOption):
 def handle_pkt(pkt):
     print("got a packet")
     pkt.show2()
-    log_packet(pkt) # +
+
+    if len(sys.argv) > 1:
+        log_packet(pkt)
 #    hexdump(pkt)
     sys.stdout.flush()
 

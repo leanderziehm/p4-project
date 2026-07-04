@@ -83,3 +83,8 @@ does ecn ever get set? (with log check)
 
 
 does debug header work?
+
+
+# TODO 
+
+before sumbit figur out why text is trunkated when setting mri and switchtraches to invalid.
