@@ -209,14 +209,29 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
 
-        // clone(CloneType.I2E,1,(bit<32>)1);       
-        // clone(CloneType.I2E,(bit<32>)99);       
         clone_preserving_field_list(CloneType.I2E,(bit<32>)99,(bit<8>)1);       
-        // extern void clone(in CloneType type, in bit<32> session);
-        // extern void clone_preserving_field_list(in CloneType type, in bit<32> session, bit<8> index);
-// 
-        // log_msg("ipv4_forward");
     }
+
+    action do_clone(bit<1> shouldClone) {
+        clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
+        hdr.mri.setInvalid();
+        // hdr.swtraces.setInvalid();
+        // can we remove it here or will it also remove the header from the clone?
+    }
+
+     
+    table last_hop {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            do_clone;
+            NoAction;
+        }
+        size = 64;
+        default_action = NoAction();
+    }
+
 
     table ipv4_lpm {
         key = {
@@ -231,9 +246,12 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
+
+
     apply {
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
+            last_hop.apply();
         }
     }
 }
@@ -245,7 +263,7 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {                
-    action add_swtrace(switchID_t swid, bit<32> ecn_threshold, ip4Addr_t telemetry_host) {
+    action add_swtrace(switchID_t swid, bit<32> ecn_threshold) {
         log_msg("add_swtrace");
         hdr.mri.count = hdr.mri.count + 1;
         hdr.swtraces.push_front(1);

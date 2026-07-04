@@ -9,9 +9,21 @@
       "action_name": "MyEgress.add_swtrace",
       "action_params": {
         "swid": 1,
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 1
+        "ecn_threshold": 500
       }
+    },
+    {
+      "table": "MyIngress.last_hop",
+      "match": { "hdr.ipv4.dstAddr": ["10.0.1.1", 32] },
+      "action_name": "MyIngress.do_clone",
+      "action_params": {}
+    },
+    {
+      "table": "MyIngress.last_hop",
+      "match": { "hdr.ipv4.dstAddr": ["10.0.2.2", 32] },
+      "action_name": "MyIngress.do_clone",
+      "action_params": {}
+    }
     },
     {
       "table": "MyIngress.ipv4_lpm",
