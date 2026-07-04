@@ -212,7 +212,7 @@ control MyIngress(inout headers hdr,
         clone_preserving_field_list(CloneType.I2E,(bit<32>)99,(bit<8>)1);       
     }
 
-    action do_clone(bit<1> shouldClone) {
+    action do_clone() {
         clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
         hdr.mri.setInvalid();
         // hdr.swtraces.setInvalid();
