@@ -3,24 +3,37 @@ import json
 from datetime import datetime
 
 from scapy.all import (
-    IP,
     UDP,
     Raw
-)
+)    # IP,
+from scapy.layers.inet import IP
+from scapy.packet import Packet
+
 
 LOG_FILE = "packets.log"
 
 
-def extract_packet_info(pkt):
+def extract_packet_info(pkt:Packet):
 
     entry = {
         "timestamp": datetime.utcnow().isoformat()
     }
 
+
+
     try:
         if IP in pkt:
             entry["src_ip"] = pkt[IP].src
             entry["dst_ip"] = pkt[IP].dst
+            pkt_ip = pkt[IP]
+            data = {
+                "version": pkt_ip.version,
+                "ihl": pkt_ip.ihl,
+                "tos": pkt_ip.tos,
+                "len": pkt_ip.len,
+                "id": pkt_ip.id}
+            
+            entry.update(data)
 
         if UDP in pkt:
             entry["src_port"] = pkt[UDP].sport
@@ -57,7 +70,7 @@ def extract_packet_info(pkt):
     return entry
 
 
-def log_packet(pkt):
+def log_packet(pkt:Packet):
 
     entry = extract_packet_info(pkt)
 

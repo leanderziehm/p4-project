@@ -8,10 +8,15 @@ The environment is containerized using Podman/Docker to simplify setup and ensur
 
 # in virtual machine:
 
+##  1. Step
 ```
 make
 ```
+or
 
+```
+cd src/mri_clone && make build && make run
+```
 in mininet
 ```
 xterm h1 h2 h3
@@ -25,6 +30,21 @@ in h2 and h3 terminal:
 ```
 ./receive.py
 ```
+##  2. Step
+
+install elasticsearch:
+```
+python3 -m pip install "elasticsearch>=8,<9"
+```
+
+either connect over ssh port tunnel to our server or selfhost the container of elasticsearch at 9200 then
+open another terminal tab or in tmux
+go to mri_clone or z_final 
+```
+python3 background_log_to_elastic.py
+```
+
+then you can see your data in kibana at port 5601
 
 
 
@@ -44,3 +64,22 @@ make
 ```
 h1 ping -i 0.01 h2
 ```
+
+
+
+# Features in split vs mri_clone
+
+ecn if conjested.
+cloning with multi switch final hop.
+
+
+# need to check 
+does mri header get removed before arriving?
+does ecn ever get set? (with log check)
+
+
+
+
+
+
+does debug header work?

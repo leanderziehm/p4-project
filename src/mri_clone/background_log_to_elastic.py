@@ -7,7 +7,7 @@ import os
 from elasticsearch import Elasticsearch
 
 LOG_FILE = "packets.log"
-INDEX = "mri-packets"
+INDEX = "mri-packets2"
 ES_HOST = "http://localhost:9200"
 STATE_FILE = "indexed_hashes.json"
 
