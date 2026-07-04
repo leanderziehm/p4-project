@@ -19,6 +19,8 @@ typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 typedef bit<32> switchID_t;
 typedef bit<32> qdepth_t;
+typedef bit<32> qtime_t;
+typedef bit<32> ingress_ts_t;
 
 header ethernet_t {
     macAddr_t dstAddr;

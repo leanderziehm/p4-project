@@ -1,11 +1,11 @@
-final:
-	cd src/z_final && make build && make run
+mri_clone:
+	cd src/mri_clone && make build && make run
 
 split:
 	cd src/split && make build && make run
 
-mri_clone:
-	cd src/mri_clone && make build && make run
+final:
+	cd src/z_final && make build && make run
 
 main container:
 	cd container/p4_mininet && make
