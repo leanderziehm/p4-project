@@ -68,9 +68,9 @@ header switch_t {
     ingress_ts_t ingress_ts;
     qtime_t qtime;
 }
-header debug_t {
-    bit<8> marker;
-}
+// header debug_t {
+//     bit<8> marker;
+// }
 
 struct ingress_metadata_t {
     bit<16>  count;
@@ -100,7 +100,7 @@ struct headers {
     ipv4_option_t      ipv4_option;
     mri_t              mri;
     switch_t[MAX_HOPS] swtraces;
-    debug_t            debug;
+    // debug_t            debug;
 }
 
 
@@ -274,14 +274,14 @@ control MyEgress(inout headers hdr,
     action redirect_clone_to_telemetry() {
         truncate((bit<32>) hdr.ipv4.totalLen);
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
-        hdr.debug.setValid();
-        hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
+        // hdr.debug.setValid();
+        // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }
 
     action strip_telemetry_headers() {
         hdr.mri.setInvalid();
-        hdr.debug.setValid();
-        hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
+        // hdr.debug.setValid();
+        // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }
 
     table swtrace_config {
@@ -348,7 +348,7 @@ control MyDeparser(packet_out packet, in headers hdr) {
         packet.emit(hdr.ipv4_option);
         packet.emit(hdr.mri);
         packet.emit(hdr.swtraces);
-        packet.emit(hdr.debug);
+        // packet.emit(hdr.debug);
 
     }
 }

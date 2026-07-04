@@ -19,19 +19,25 @@ def extract_packet_info(pkt:Packet):
         "timestamp": datetime.utcnow().isoformat()
     }
 
-
-
     try:
         if IP in pkt:
             entry["src_ip"] = pkt[IP].src
             entry["dst_ip"] = pkt[IP].dst
             pkt_ip = pkt[IP]
+
+            dscp = pkt_ip.tos >> 2
+            ecn = pkt_ip.tos & 0x03
             data = {
                 "version": pkt_ip.version,
                 "ihl": pkt_ip.ihl,
                 "tos": pkt_ip.tos,
+                "dscp" : dscp,
+                "ecn": ecn,
                 "len": pkt_ip.len,
-                "id": pkt_ip.id}
+                "id": pkt_ip.id,
+                "ttl": pkt_ip.ttl,
+                "proto": pkt_ip.proto,
+                }
             
             entry.update(data)
 
