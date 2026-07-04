@@ -4,50 +4,11 @@
   "bmv2_json": "build/mri.json",
   "table_entries": [
     {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 1 },
-      "action_name": "MyEgress.set_swtrace_config",
+      "table": "MyEgress.swtrace",
+      "default_action": true,
+      "action_name": "MyEgress.add_swtrace",
       "action_params": {
         "swid": 1,
-        "final_host1": "10.0.1.1",
-        "final_host2": "10.0.1.11",
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 2 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 1,
-        "final_host1": "10.0.1.1",
-        "final_host2": "10.0.1.11",
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 3 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 1,
-        "final_host1": "10.0.1.1",
-        "final_host2": "10.0.1.11",
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 4 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 1,
-        "final_host1": "10.0.1.1",
-        "final_host2": "10.0.1.11",
-        "telemetry_host": "10.0.3.3",
         "ecn_threshold": 500
       }
     },

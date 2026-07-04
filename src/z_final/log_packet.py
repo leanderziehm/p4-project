@@ -3,15 +3,17 @@ import json
 from datetime import datetime
 
 from scapy.all import (
-    IP,
     UDP,
     Raw
-)
+)    # IP,
+from scapy.layers.inet import IP
+from scapy.packet import Packet
+
 
 LOG_FILE = "packets.log"
 
 
-def extract_packet_info(pkt):
+def extract_packet_info(pkt:Packet):
 
     entry = {
         "timestamp": datetime.utcnow().isoformat()
@@ -21,6 +23,23 @@ def extract_packet_info(pkt):
         if IP in pkt:
             entry["src_ip"] = pkt[IP].src
             entry["dst_ip"] = pkt[IP].dst
+            pkt_ip = pkt[IP]
+
+            dscp = pkt_ip.tos >> 2
+            ecn = pkt_ip.tos & 0x03
+            data = {
+                "version": pkt_ip.version,
+                "ihl": pkt_ip.ihl,
+                "tos": pkt_ip.tos,
+                "dscp" : dscp,
+                "ecn": ecn,
+                "len": pkt_ip.len,
+                "id": pkt_ip.id,
+                "ttl": pkt_ip.ttl,
+                "proto": pkt_ip.proto,
+                }
+            
+            entry.update(data)
 
         if UDP in pkt:
             entry["src_port"] = pkt[UDP].sport
@@ -43,9 +62,8 @@ def extract_packet_info(pkt):
                         switches.append({
                             "swid": trace.swid,
                             "qdepth": trace.qdepth,
-                            # "ingress_ts": trace.ingress_ts,
-                            # "qtime": trace.qtime,
-                            # "pkt_len": trace.pkt_len
+                            "ingress_ts": trace.ingress_ts,
+                            "qtime": trace.qtime
                         })
 
         entry["switches"] = switches
@@ -57,7 +75,7 @@ def extract_packet_info(pkt):
     return entry
 
 
-def log_packet(pkt):
+def log_packet(pkt:Packet):
 
     entry = extract_packet_info(pkt)
 

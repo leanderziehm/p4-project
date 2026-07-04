@@ -27,22 +27,15 @@ def get_if():
     return iface
 
 class SwitchTrace(Packet):
-    
-    fields_desc = [ IntField("swid", 0),
-                  IntField("qdepth", 0),IntField("ingress_ts", 0), IntField("qtime",0)]
+    fields_desc = [
+        IntField("swid", 0),
+        IntField("qdepth", 0),
+        IntField("ingress_ts", 0),
+        IntField("qtime", 0),
+    ]
     
     def extract_padding(self, p):
                 return "", p
-    
-#   fields_desc = [
-#         IntField("swid", 0),
-#         IntField("qdepth", 0),
-#         IntField("ingress_ts", 0),
-#         IntField("qtime", 0),
-#         IntField("pkt_len", 0)
-#     ]
-
-
 
 class IPOption_MRI(IPOption):
     name = "MRI"
@@ -60,7 +53,9 @@ class IPOption_MRI(IPOption):
 def handle_pkt(pkt):
     print("got a packet")
     pkt.show2()
-    log_packet(pkt) # +
+
+    if len(sys.argv) > 1:
+        log_packet(pkt)
 #    hexdump(pkt)
     sys.stdout.flush()
 

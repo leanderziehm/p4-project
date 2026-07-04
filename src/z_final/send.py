@@ -75,11 +75,6 @@ def main():
             dport=4321, sport=1234) / message
     
 
-
- #   pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / IP(
- #       dst=addr, options = IPOption_MRI(count=2,
- #           swtraces=[SwitchTrace(swid=0,qdepth=0), SwitchTrace(swid=1,qdepth=0)])) / UDP(
- #           dport=4321, sport=1234) / sys.argv[2]
     pkt.show2()
     #hexdump(pkt)
     try:
