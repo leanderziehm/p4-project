@@ -62,9 +62,8 @@ def extract_packet_info(pkt:Packet):
                         switches.append({
                             "swid": trace.swid,
                             "qdepth": trace.qdepth,
-                            # "ingress_ts": trace.ingress_ts,
-                            # "qtime": trace.qtime,
-                            # "pkt_len": trace.pkt_len
+                            "ingress_ts": trace.ingress_ts,
+                            "qtime": trace.qtime
                         })
 
         entry["switches"] = switches
