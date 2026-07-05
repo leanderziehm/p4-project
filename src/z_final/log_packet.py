@@ -12,7 +12,6 @@ from scapy.packet import Packet
 
 LOG_FILE = "packets.log"
 
-
 def extract_packet_info(pkt:Packet):
 
     entry = {

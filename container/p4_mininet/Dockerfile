@@ -41,6 +41,7 @@ RUN ./user-common-bootstrap.sh
 RUN apt-get install tmux
 RUN apt-get install -y mininet
 RUN apt-get install -y vim
+RUN apt-get install x11-xserver-utils
 USER p4
 WORKDIR /p4-project
 CMD ["/bin/bash"]

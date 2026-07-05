@@ -56,6 +56,7 @@ def handle_pkt(pkt):
 
     if len(sys.argv) > 1:
         log_packet(pkt)
+        
 #    hexdump(pkt)
     sys.stdout.flush()
 

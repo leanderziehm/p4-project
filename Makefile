@@ -1,17 +1,22 @@
 
-final:
+1 final:
 	cd src/z_final && make build && make run
 
-mri_clone:
+2 mri_clone:
 	cd src/mri_clone && make build && make run
 
 split:
 	cd src/split && make build && make run
 
-
-main container:
+0 main container:
 	cd container/p4_mininet && make
 
+elastic:
+	    ssh -i elasticsearch/secret/elasticsearch_ssh_port_tunneling_user -L 9200:localhost:9200 -L 5601:localhost:5601 ssh_port_tunneling_user@130.162.236.17
+
+elastic-compose compose:
+	cd container/elasticsearch && podman compose up
+	
 
 mri_simple:
 	cd src/mri_simple && make build && make run
@@ -76,9 +81,7 @@ runbasic2:
 rundev:
 	cd src/dev && make build && make run
 
-elastic:
-	cd container/elasticsearch && podman compose up
-	
+
 
 
 

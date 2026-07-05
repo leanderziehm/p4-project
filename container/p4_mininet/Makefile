@@ -1,10 +1,24 @@
 IMAGE_NAME := p4-mininet
 CONTAINER_NAME := p4-dev
 
-all: build run 
+all: build run_with_xterm 
 
 build:
 	sudo podman build -t $(IMAGE_NAME) .
+
+run_with_xterm:
+	sudo podman run \
+	   	-e DISPLAY=$$DISPLAY \
+    	-v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+		--rm \
+		--replace \
+		--privileged \
+		--network host \
+		-it \
+		-v $(shell git rev-parse --show-toplevel):/p4-project:Z \
+		--name $(CONTAINER_NAME) \
+		localhost/$(IMAGE_NAME):latest
+
 
 run:
 	sudo podman run \

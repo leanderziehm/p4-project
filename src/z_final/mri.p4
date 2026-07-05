@@ -20,7 +20,14 @@ typedef bit<32> ip4Addr_t;
 typedef bit<32> switchID_t;
 typedef bit<32> qdepth_t;
 typedef bit<32> qtime_t;
+// typedef bit<48> ingress_ts_t;
 typedef bit<32> ingress_ts_t;
+// typedef bit<48> egress_ts_t;
+// typedef bit<3> priority_t;
+// typedef bit<9> ingress_port_t;
+// typedef bit<9> egress_port_t;
+// typedef bit<32> packet_length_t;
+
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -68,6 +75,12 @@ header switch_t {
     qdepth_t    qdepth;
     ingress_ts_t ingress_ts;
     qtime_t qtime;
+    // egress_ts_t egress_ts;
+    // priority_t priority;
+    // ingress_port_t ingress_port;
+    // egress_port_t egress_port;
+    // packet_length_t packet_length;
+
 }
 
 struct ingress_metadata_t {
@@ -208,7 +221,15 @@ control MyIngress(inout headers hdr,
     }
 
     action do_clone() {
+        
         clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
+
+
+
+
+
+
+
         hdr.mri.setInvalid();
         hdr.swtraces[0].setInvalid();
         hdr.swtraces[1].setInvalid();
@@ -219,6 +240,8 @@ control MyIngress(inout headers hdr,
         hdr.swtraces[6].setInvalid();
         hdr.swtraces[7].setInvalid();
         hdr.swtraces[8].setInvalid();
+
+
         // is there a cleaner way to set all invalid?
     }
 
@@ -272,7 +295,6 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qdepth = (qdepth_t)standard_metadata.deq_qdepth;
         hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
-
 
         hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
         hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
