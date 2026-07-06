@@ -1,3 +1,6 @@
+2 split_more2:
+	cd src/split_more2 && make build && make run
+
 2 split_more:
 	cd src/split_more && make build && make run
 
