@@ -69,6 +69,23 @@ h1 ping -i 0.01 h2
 ```
 
 
+## Steps for demo
+
+
+```bash
+make 0
+# ctrl + b + c
+make 1 
+make 2 
+xterm h1 h2 h3 h11 h22
+python3 ./experiment.py
+python3 ./receive.py log
+```
+
+
+
+
+
 
 # Features in split vs mri_clone
 

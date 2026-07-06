@@ -52,8 +52,8 @@ def extract_packet_info(pkt:Packet):
 
         if IP in pkt and pkt[IP].options:
 
-            print("hi")
-            print(pkt[IP].options)
+            # print("hi")
+            # print(pkt[IP].options)
             
 
             for option in pkt[IP].options:
@@ -69,15 +69,31 @@ def extract_packet_info(pkt:Packet):
 
 
                 if hasattr(option, "swtraces"):
-
+                    last_ingess = None
                     for trace in option.swtraces:
+                        delta = None
+                        if last_ingess is not None:
+                            # print("last_ingess",last_ingess)
+                            delta = trace.ingress_ts - last_ingess
+                            # print("delta:",delta)
 
-                        switches.append({
+                            # first one is always 0.
+                            # last one doenst have something to compare to.
+                        
+                        last_ingess = trace.ingress_ts
+
+                        switch_data= {
                             "swid": trace.swid,
                             "qdepth": trace.qdepth,
                             "ingress_ts": trace.ingress_ts,
-                            "qtime": trace.qtime
-                        })
+                            "qtime": trace.qtime,  
+                        }
+                        
+                        if delta  is not None:
+                            switch_data["hop_ts_delta"]= delta
+
+                        switches.append(switch_data)
+                        
 
         entry["switches"] = switches
         entry["hop_count"] = len(switches)

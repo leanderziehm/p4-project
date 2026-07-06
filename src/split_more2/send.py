@@ -65,6 +65,9 @@ def main():
     message = sys.argv[2]
     packet_amount = int(sys.argv[3]) if len(sys.argv) > 3 else 1
     packet_interval = float(sys.argv[4]) if len(sys.argv) > 4 else 1.0
+
+    print(f"packet amonut:{packet_amount}")
+
     print(f"ip={ip} message={message} packet_amount={packet_amount} packet_interval={packet_interval}")
 
     addr = socket.gethostbyname(ip)
@@ -81,6 +84,7 @@ def main():
     try:
       for i in range(packet_amount):
         sendp(pkt, iface=iface)
+        print(f"sleep:{packet_interval}")
         sleep(packet_interval)
     except KeyboardInterrupt:
         raise

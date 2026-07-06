@@ -2,6 +2,7 @@
 import subprocess
 import random
 import json
+import time
 
 # -----------------------------
 # Load topology hosts
@@ -70,11 +71,13 @@ def generate_payload():
 # Experiments
 # -----------------------------
 EXPERIMENTS = [
-    {"name": "rate_1pps", "count": 50, "interval": 1.0},
-    {"name": "rate_10pps", "count": 50, "interval": 0.1},
-    {"name": "rate_50pps", "count": 50, "interval": 0.02},
-    {"name": "rate_100pps", "count": 50, "interval": 0.01},
+    # {"name": "rate_100pps", "count": 10000, "interval":3},
+    {"name": "rate_100pps", "count": 10000, "interval": 0.001},
 ]
+    # {"name": "rate_1pps", "count": 50, "interval": 1.0},
+    # {"name": "rate_10pps", "count": 50, "interval": 0.1},
+    # {"name": "rate_50pps", "count": 50, "interval": 0.02},
+    # {"name": "rate_100pps", "count": 50, "interval": 0.01},
 
 
 def main():
@@ -92,27 +95,41 @@ def main():
     # print(f"can send to hosts: {SEND_TO_HOSTS}")
 
     for exp in EXPERIMENTS:
-        print(f"\n=== Running {exp['name']} ===")
 
         for i in range(exp["count"]):
 
-            # pick random destination host
+            name = str(exp['name'])
+            count = exp['count']
+            interval = exp['interval']
+
+            print(f"\n=== Running {exp['name']} ===")
+          
+
             ip = random.choice(ips)
 
+        
             # generate payload
             payload = generate_payload()
-
             # optional: keep payload single-line safe
             payload = payload.replace("\n", " ")
+            # print(f"[{exp['name']}] {i+1}/{exp['count']} -> ({ip})")
+            time.sleep(interval)
 
-            print(f"[{exp['name']}] {i+1}/{exp['count']} -> ({ip})")
+
+     
+
+
+            print(f"[n={name}]/c={count} i={interval} -> ({ip}) ")
 
             subprocess.run([
                 "python3",
                 "send.py",
                 ip,
-                exp["name"] + payload
+                exp["name"] + payload, 
+                "50",
+                str(interval)
             ])
+
     print("\nAll experiments completed.")
 
 
