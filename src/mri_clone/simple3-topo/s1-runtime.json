@@ -8,73 +8,66 @@
       "default_action": true,
       "action_name": "MyEgress.add_swtrace",
       "action_params": {
-        "swid": 2,
+        "swid": 1,
         "ecn_threshold": 500
       }
     },
     {
       "table": "MyIngress.last_hop",
-      "match": { "hdr.ipv4.dstAddr": ["10.0.2.2", 32] },
+      "match": { "hdr.ipv4.dstAddr": ["10.0.1.1", 32] },
       "action_name": "MyIngress.do_clone",
       "action_params": {}
     },
     {
       "table": "MyIngress.last_hop",
-      "match": { "hdr.ipv4.dstAddr": ["10.0.2.22", 32] },
+      "match": { "hdr.ipv4.dstAddr": ["10.0.1.11", 32] },
       "action_name": "MyIngress.do_clone",
       "action_params": {}
     },
     {
       "table": "MyIngress.ipv4_lpm",
-      "match": {
-        "hdr.ipv4.dstAddr": ["10.0.2.2", 32]
-      },
+      "match": { "hdr.ipv4.dstAddr": ["10.0.1.1",32] },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "08:00:00:00:01:01",
+        "port": 1
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": { "hdr.ipv4.dstAddr": ["10.0.1.11",32] },
+      "action_name": "MyIngress.ipv4_forward",
+      "action_params": {
+        "dstAddr": "08:00:00:00:01:11",
+        "port": 3
+      }
+    },
+    {
+      "table": "MyIngress.ipv4_lpm",
+      "match": { "hdr.ipv4.dstAddr": ["10.0.2.2",32] },
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
         "dstAddr": "08:00:00:00:02:02",
         "port": 2
       }
     },
-    {
+      {
       "table": "MyIngress.ipv4_lpm",
-      "match": {
-        "hdr.ipv4.dstAddr": ["10.0.2.22", 32]
-      },
+      "match": { "hdr.ipv4.dstAddr": ["10.0.3.3",32] },
       "action_name": "MyIngress.ipv4_forward",
       "action_params": {
-        "dstAddr": "08:00:00:00:02:22",
-        "port": 1
-      }
-    },
-    {
-      "table": "MyIngress.ipv4_lpm",
-      "match": {
-        "hdr.ipv4.dstAddr": ["10.0.1.0", 24]
-      },
-      "action_name": "MyIngress.ipv4_forward",
-      "action_params": {
-        "dstAddr": "08:00:00:00:01:00",
-        "port": 3
-      }
-    },
-    {
-      "table": "MyIngress.ipv4_lpm",
-      "match": {
-        "hdr.ipv4.dstAddr": ["10.0.3.0", 24]
-      },
-      "action_name": "MyIngress.ipv4_forward",
-      "action_params": {
-        "dstAddr": "08:00:00:00:03:00",
-        "port": 4
+        "dstAddr": "08:00:00:00:03:03",
+        "port": 2
       }
     }
+    
   ],
   "clone_session_entries": [
     {
       "clone_session_id": 99,
       "replicas": [
         {
-          "egress_port": 3,
+          "egress_port": 2,
           "instance": 1
         }
       ],

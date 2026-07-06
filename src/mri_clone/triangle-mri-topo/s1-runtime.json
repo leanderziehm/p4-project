@@ -8,8 +8,21 @@
       "default_action": true,
       "action_name": "MyEgress.add_swtrace",
       "action_params": {
-         "swid": 1
-       }
+        "swid": 1,
+        "ecn_threshold": 500
+      }
+    },
+    {
+      "table": "MyIngress.last_hop",
+      "match": { "hdr.ipv4.dstAddr": ["10.0.1.1", 32] },
+      "action_name": "MyIngress.do_clone",
+      "action_params": {}
+    },
+    {
+      "table": "MyIngress.last_hop",
+      "match": { "hdr.ipv4.dstAddr": ["10.0.1.11", 32] },
+      "action_name": "MyIngress.do_clone",
+      "action_params": {}
     },
     {
       "table": "MyIngress.ipv4_lpm",
@@ -55,6 +68,18 @@
         "dstAddr": "08:00:00:00:03:00",
         "port": 4
       }
+    }
+  ],
+  "clone_session_entries": [
+    {
+      "clone_session_id": 99,
+      "replicas": [
+        {
+          "egress_port": 3,
+          "instance": 1
+        }
+      ],
+      "packet_length_bytes": 0
     }
   ]
 }

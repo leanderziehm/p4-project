@@ -98,3 +98,35 @@ figure out why its cut off in h2.
 Biggest goal make demo work. new topology. Different topology to make it work for real.
 consjestion and delay and send experiment. 
 add data for tracking.
+
+
+```python
+
+   def parse_links(self, unparsed_links):
+        """ Given a list of links descriptions of the form [node1, node2, latency, bandwidth]
+            with the latency and bandwidth being optional, parses these descriptions
+            into dictionaries and store them as self.links
+        """
+        links = []
+        for link in unparsed_links:
+            # make sure each link's endpoints are ordered alphabetically
+            s, t, = link[0], link[1]
+            if s > t:
+                s,t = t,s
+
+            link_dict = {'node1':s,
+                        'node2':t,
+                        'latency':'0ms',
+                        'bandwidth':None
+                        }
+            if len(link) > 2:
+                link_dict['latency'] = self.format_latency(link[2])
+            if len(link) > 3:
+                link_dict['bandwidth'] = link[3]
+
+            if link_dict['node1'][0] == 'h':
+                assert link_dict['node2'][0] == 's', 'Hosts should be connected to switches, not ' + str(link_dict['node2'])
+            links.append(link_dict)
+        return links
+
+```

@@ -1,8 +1,10 @@
 2 mri_clone:
-	cd src/mri_clone && tmux new -s mri_clone "make build && make run"
+	cd src/mri_clone && make build && make run
+# 	cd src/mri_clone && tmux has-session -t mri_clone 2>/dev/null && tmux attach -t mri_clone || tmux new -s mri_clone "make build && make run"
+# 	 tmux new -s mri_clone "make build && make run"
 # 	cd src/mri_clone && make build && make run
 
-4 final:
+3 final:
 	cd src/z_final && make build && make run
 
 split:

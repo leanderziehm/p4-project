@@ -4,6 +4,15 @@
   "bmv2_json": "build/basic.json",
   "table_entries": [
     {
+      "table": "MyEgress.swtrace",
+      "default_action": true,
+      "action_name": "MyEgress.add_swtrace",
+      "action_params": {
+        "swid": 3,
+        "ecn_threshold": 500
+      }
+    },
+    {
       "table": "MyIngress.ipv4_lpm",
       "default_action": true,
       "action_name": "MyIngress.drop",
@@ -52,6 +61,18 @@
         "dstAddr": "08:00:00:00:02:00",
         "port": 2
       }
+    }
+  ],
+  "clone_session_entries": [
+    {
+      "clone_session_id": 99,
+      "replicas": [
+        {
+          "egress_port": 3,
+          "instance": 1
+        }
+      ],
+      "packet_length_bytes": 0
     }
   ]
 }
