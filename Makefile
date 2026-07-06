@@ -1,9 +1,8 @@
-
-1 final:
-	cd src/z_final && make build && make run
-
-2 mri_clone:
+3 mri_clone:
 	cd src/mri_clone && make build && make run
+
+2 final:
+	cd src/z_final && make build && make run
 
 split:
 	cd src/split && make build && make run
@@ -11,8 +10,9 @@ split:
 0 main container:
 	cd container/p4_mininet && make
 
-elastic:
-	    ssh -i elasticsearch/secret/elasticsearch_ssh_port_tunneling_user -L 9200:localhost:9200 -L 5601:localhost:5601 ssh_port_tunneling_user@130.162.236.17
+# keep this in extra background terminal open
+1 elastic:
+	    ssh -i elastic_server/secret/elasticsearch_ssh_port_tunneling_user.pem -L 9200:localhost:9200 -L 5601:localhost:5601 ssh_port_tunneling_user@130.162.236.17
 
 elastic-compose compose:
 	cd container/elasticsearch && podman compose up

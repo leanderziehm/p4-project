@@ -10,6 +10,8 @@ run_with_xterm:
 	sudo podman run \
 	   	-e DISPLAY=$$DISPLAY \
     	-v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+		-e XAUTHORITY=/tmp/.Xauthority \
+		-v $$XAUTHORITY:/tmp/.Xauthority:rw \
 		--rm \
 		--replace \
 		--privileged \
