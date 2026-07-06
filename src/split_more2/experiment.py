@@ -40,18 +40,11 @@ WORDS = [
 ]
 
 
-def random_sentence():
-    return random.choice(SENTENCES)
+def random_paragraph(min_sent=1, max_sent=1500):
+    return " ".join(random.choice(SENTENCES) for _ in range(random.randint(min_sent, max_sent)))
 
 
-def random_paragraph(min_sent=1, max_sent=5):
-    return " ".join(
-        random_sentence()
-        for _ in range(random.randint(min_sent, max_sent))
-    )
-
-
-def random_noise_text(min_words=3, max_words=20):
+def random_noise_text(min_words=3, max_words=1500):
     return " ".join(
         random.choice(WORDS)
         for _ in range(random.randint(min_words, max_words))
@@ -59,10 +52,8 @@ def random_noise_text(min_words=3, max_words=20):
 
 
 def generate_payload():
-    mode = random.choice(["sentence", "paragraph", "noise"])
-    if mode == "sentence":
-        return random_sentence()
-    elif mode == "paragraph":
+    mode = random.choice(["sentences", "words"])
+    if mode == "sentences":
         return random_paragraph()
     else:
         return random_noise_text()
@@ -72,7 +63,7 @@ def generate_payload():
 # -----------------------------
 EXPERIMENTS = [
     # {"name": "rate_100pps", "count": 10000, "interval":3},
-    {"name": "rate_100pps", "count": 10000, "interval": 0.001},
+    {"name": "rate_100pps", "count": 99999999, "interval": 0.001,"amount": 500},
 ]
     # {"name": "rate_1pps", "count": 50, "interval": 1.0},
     # {"name": "rate_10pps", "count": 50, "interval": 0.1},
@@ -81,44 +72,23 @@ EXPERIMENTS = [
 
 
 def main():
-
-    # SEND_TO_HOSTS = ["10.0.1.1","10.0.2.2"]
-    # SEND_TO_HOSTS = ["10.0.2.2","10.0.1.11"]
     TELEMETRY_HOST = "10.0.3.3"
-
-    # validate_ips([*SEND_TO_HOSTS,TELEMETRY_HOST])
     ips = load_ips_from_topology("topology.json")
     print(f"ips: {ips}")
-
     ips.remove(TELEMETRY_HOST)
-    
-    # print(f"can send to hosts: {SEND_TO_HOSTS}")
-
     for exp in EXPERIMENTS:
-
         for i in range(exp["count"]):
-
             name = str(exp['name'])
             count = exp['count']
             interval = exp['interval']
-
+            amount = str(exp['amount'])
             print(f"\n=== Running {exp['name']} ===")
-          
-
             ip = random.choice(ips)
-
-        
-            # generate payload
             payload = generate_payload()
-            # optional: keep payload single-line safe
             payload = payload.replace("\n", " ")
-            # print(f"[{exp['name']}] {i+1}/{exp['count']} -> ({ip})")
+            max_len = 1453
+            payload = payload[:max_len]
             time.sleep(interval)
-
-
-     
-
-
             print(f"[n={name}]/c={count} i={interval} -> ({ip}) ")
 
             subprocess.run([
@@ -126,7 +96,7 @@ def main():
                 "send.py",
                 ip,
                 exp["name"] + payload, 
-                "50",
+                amount,
                 str(interval)
             ])
 

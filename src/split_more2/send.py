@@ -72,11 +72,13 @@ def main():
 
     addr = socket.gethostbyname(ip)
     iface = get_if()
+    ip_header = IP(dst=addr, options = IPOption_MRI(count=0,swtraces=[]))
 
-    pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / IP(
-        dst=addr, options = IPOption_MRI(count=0,
-            swtraces=[])) / UDP(
-            dport=4321, sport=1234) / message
+    # print("ip_header size:",len(bytes(ip_header)))
+    # ip_hdr_len = len(bytes(ip_header)) #
+    # print("max_payload:",65535 - ip_hdr_len - 8)
+
+    pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / ip_header / UDP( dport=4321, sport=1234) / message
     
 
     pkt.show2()

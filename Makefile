@@ -10,7 +10,10 @@
 	cd container/p4_mininet && make
 
 # keep this in extra background terminal open
-0 elastic:
+0 sshtmux elastic:
+	tmux has-session -t ssh-tunnel 2>/dev/null && tmux attach -t ssh-tunnel || tmux new -s ssh-tunnel "ssh -i elastic_server/secret/elasticsearch_ssh_port_tunneling_user.pem -L 9200:localhost:9200 -L 5601:localhost:5601 ssh_port_tunneling_user@130.162.236.17"
+
+ssh elastic:
 	tmux has-session -t ssh-tunnel 2>/dev/null && tmux attach -t ssh-tunnel || tmux new -s ssh-tunnel "ssh -i elastic_server/secret/elasticsearch_ssh_port_tunneling_user.pem -L 9200:localhost:9200 -L 5601:localhost:5601 ssh_port_tunneling_user@130.162.236.17"
 
 
