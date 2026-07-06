@@ -47,8 +47,9 @@ class IPOption_MRI(IPOption):
     fields_desc = [ _IPOption_HDR,
                     FieldLenField("length", None, fmt="B",
                                   length_of="swtraces",
-                                  adjust=lambda pkt,l:l*2+4),
+                                  adjust=lambda pkt,l:l*2+4), #16 + 8),
                     ShortField("count", 0),
+                    IntField("originalDstAddr", 0),
                     PacketListField("swtraces",
                                    [],
                                    SwitchTrace,
@@ -72,7 +73,7 @@ def main():
     iface = get_if()
 
     pkt = Ether(src=get_if_hwaddr(iface), dst="ff:ff:ff:ff:ff:ff") / IP(
-        dst=addr, options = IPOption_MRI(count=0,
+        dst=addr, options = IPOption_MRI(count=0,originalDstAddr=0, 
             swtraces=[])) / UDP(
             dport=4321, sport=1234) / message
     

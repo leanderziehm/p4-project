@@ -7,7 +7,7 @@
 3 final:
 	cd src/z_final && make build && make run
 
-split:
+4 split:
 	cd src/split && make build && make run
 
 1 main container:

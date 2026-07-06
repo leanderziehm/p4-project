@@ -85,6 +85,7 @@ struct egress_metadata_t {
     ip4Addr_t   final_host1;
     ip4Addr_t   final_host2;
     ip4Addr_t   telemetry_host;
+    egressSpec_t   telemetry_port;
     qtime_t     ecn_threshold;
 }
 
@@ -243,12 +244,13 @@ control MyEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata) {
 
     action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
-                               ip4Addr_t final_host2, ip4Addr_t telemetry_host,
+                               ip4Addr_t final_host2, ip4Addr_t telemetry_host,egressSpec_t telemetry_port,
                                qtime_t ecn_threshold) {
         meta.egress_metadata.swid           = swid;
         meta.egress_metadata.final_host1    = final_host1;
         meta.egress_metadata.final_host2    = final_host2;
         meta.egress_metadata.telemetry_host = telemetry_host;
+        meta.egress_metadata.telemetry_port = telemetry_port;
         meta.egress_metadata.ecn_threshold  = ecn_threshold;
     }
 
@@ -272,14 +274,32 @@ control MyEgress(inout headers hdr,
     }
 
     action redirect_clone_to_telemetry() {
-        truncate((bit<32>) hdr.ipv4.totalLen);
+        // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
+        // ethernet mac? 
+        standard_metadata.egress_spec = meta.egress_metadata.telemetry_port;//port;
+        
+        
         // hdr.debug.setValid();
         // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }
 
     action strip_telemetry_headers() {
-        hdr.mri.setInvalid();
+        hdr.mri.setInvalid(); // uncomment later
+        hdr.swtraces[0].setInvalid();
+        hdr.swtraces[1].setInvalid();
+        hdr.swtraces[2].setInvalid();
+        hdr.swtraces[3].setInvalid();
+        hdr.swtraces[4].setInvalid();
+        hdr.swtraces[5].setInvalid();
+        hdr.swtraces[6].setInvalid();
+        hdr.swtraces[7].setInvalid();
+        hdr.swtraces[8].setInvalid();
+        hdr.ipv4_option.setInvalid(); // uncomment later
+        // hdr.ipv4.ihl = 5;
+        hdr.ipv4.ihl = (bit<4>) 5;
+        // hdr.ipv4.totalLen = hdr.ipv4.totalLen - (bit<16>) 4;
+
         // hdr.debug.setValid();
         // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }

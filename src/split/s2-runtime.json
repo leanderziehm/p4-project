@@ -5,52 +5,18 @@
   "table_entries": [
     {
       "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 1 },
+      "default_action": true,
       "action_name": "MyEgress.set_swtrace_config",
       "action_params": {
         "swid": 2,
         "final_host1": "10.0.2.2",
         "final_host2": "10.0.2.22",
         "telemetry_host": "10.0.3.3",
+        "telemetry_port": 4,
         "ecn_threshold": 500
       }
     },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 2 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 2,
-        "final_host1": "10.0.2.2",
-        "final_host2": "10.0.2.22",
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 3 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 2,
-        "final_host1": "10.0.2.2",
-        "final_host2": "10.0.2.22",
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 4 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 2,
-        "final_host1": "10.0.2.2",
-        "final_host2": "10.0.2.22",
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
+  
     {
       "table": "MyIngress.last_hop",
       "match": { "hdr.ipv4.dstAddr": ["10.0.2.2", 32] },

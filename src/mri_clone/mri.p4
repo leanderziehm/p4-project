@@ -7,6 +7,10 @@ const bit<8>  PROTOCOL_TCP = 0x07;
 const bit<8>  PROTOCOL_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
+const bit<5>  IPV4_OPTION_MRI_CLONE = 30;
+
+typedef bit<4> PortId;
+const PortId RECIRCULATE_IN_PORT = 0xD;
 
 #define MAX_HOPS 9
 
@@ -61,7 +65,7 @@ header ipv4_option_t {
 
 header mri_t {
     bit<16>  count;
-    // bit<16>  debug;
+    bit<32>  originalDstAddr; // need this to check if is cloned packet or not because destination adress is not properly set for ip
 }
 
 header switch_t {
@@ -73,11 +77,13 @@ header switch_t {
 
 struct ingress_metadata_t {
     bit<16>  count;
+    bit<1>  isNewClone;
 }
 
 struct parser_metadata_t {
     bit<16>  remaining;
     bit<1>  cloneable;
+    bit<1>  isClone;
 }
 
 struct metadata {
@@ -146,8 +152,15 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ipv4_option);
         transition select(hdr.ipv4_option.option) {
             IPV4_OPTION_MRI: parse_mri;
+            IPV4_OPTION_MRI_CLONE: parse_mri_clone;
             default: accept;
         }
+    }
+
+    state parse_mri_clone {
+        meta.parser_metadata.isClone = 1;
+        meta.parser_metadata.cloneable = 0;
+        transition parse_mri;
     }
 
     state parse_mri {
@@ -213,23 +226,36 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
-    action do_clone(ip4Addr_t sinkAddr) {
-        ip4Addr_t temp = hdr.ipv4.dstAddr;
-        hdr.ipv4.dstAddr = (ip4Addr_t) sinkAddr;
-        clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
-        hdr.mri.setInvalid();
-        hdr.swtraces[0].setInvalid();
-        hdr.swtraces[1].setInvalid();
-        hdr.swtraces[2].setInvalid();
-        hdr.swtraces[3].setInvalid();
-        hdr.swtraces[4].setInvalid();
-        hdr.swtraces[5].setInvalid();
-        hdr.swtraces[6].setInvalid();
-        hdr.swtraces[7].setInvalid();
-        hdr.swtraces[8].setInvalid();
-        hdr.ipv4.ihl = (bit<4>) 5;
-        hdr.ipv4_option.setInvalid();
-        hdr.ipv4.dstAddr = temp; //maybe also set mac?
+    action do_clone(ip4Addr_t sinkIp,macAddr_t sinkMac,egressSpec_t sinkPort) {
+        hdr.mri.originalDstAddr = hdr.ipv4.dstAddr;
+        hdr.ipv4.dstAddr = sinkIp;
+        meta.ingress_metadata.isNewClone = 1;
+        // hdr.ethernet.dstAddr = sinkMac; // 08:00:00:00:03:03
+        // standard_metadata.egress_spec = sinkPort;
+
+
+        
+
+        // me
+       
+        // isNewClone
+
+        // standard_metadata.egress_spec = RECIRCULATE_IN_PORT;
+  
+       
+        // clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
+        // hdr.mri.setInvalid();
+        // hdr.swtraces[0].setInvalid();
+        // hdr.swtraces[1].setInvalid();
+        // hdr.swtraces[2].setInvalid();
+        // hdr.swtraces[3].setInvalid();
+        // hdr.swtraces[4].setInvalid();
+        // hdr.swtraces[5].setInvalid();
+        // hdr.swtraces[6].setInvalid();
+        // hdr.swtraces[7].setInvalid();
+        // hdr.swtraces[8].setInvalid();
+        // hdr.ipv4.ihl = (bit<4>) 5;
+        // hdr.ipv4_option.setInvalid();
     }
 
      
@@ -265,8 +291,10 @@ control MyIngress(inout headers hdr,
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
 
-            if( meta.parser_metadata.cloneable == 1 ){
+            if( meta.parser_metadata.cloneable == 1 ){ // &&  meta.parser_metadata.isClone == 0
+                // ip4Addr_t temp = hdr.ipv4.dstAddr;
                 last_hop.apply();
+                // hdr.ipv4.dstAddr = temp; //maybe also set mac?
             }
            
         }
@@ -283,6 +311,7 @@ control MyEgress(inout headers hdr,
     action add_swtrace(switchID_t swid, bit<32> ecn_threshold) {
         // log_msg("add_swtrace");
         hdr.mri.count = hdr.mri.count + 1;
+        hdr.mri.setValid();
         hdr.swtraces.push_front(1);
         hdr.swtraces[0].setValid();
         hdr.swtraces[0].swid = swid;
@@ -290,10 +319,10 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
 
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 4;  // 1 = 32 bits 
+        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16; // 1 = 8 bits.  adding 4 bytes every 32.  32/8 = 4
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16; // 1 = 8 bits.
 
-        hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
-        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
-        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
 
         if (standard_metadata.deq_timedelta > ecn_threshold) {
             hdr.ipv4.ecn = 0x03;
@@ -310,7 +339,14 @@ control MyEgress(inout headers hdr,
 
     apply {
         if (hdr.mri.isValid()) {
-            swtrace.apply();
+
+            if (meta.ingress_metadata.isNewClone == 1){
+                
+            }
+
+            if (meta.parser_metadata.isClone == 0){
+                swtrace.apply();
+            }
         }
     }
 }

@@ -5,37 +5,14 @@
   "table_entries": [
     {
       "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 1 },
+      "default_action": true,
       "action_name": "MyEgress.set_swtrace_config",
       "action_params": {
         "swid": 3,
         "final_host1": "0.0.0.0",
         "final_host2": "0.0.0.0",
         "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 2 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 3,
-        "final_host1": "0.0.0.0",
-        "final_host2": "0.0.0.0",
-        "telemetry_host": "10.0.3.3",
-        "ecn_threshold": 500
-      }
-    },
-    {
-      "table": "MyEgress.swtrace_config",
-      "match": { "standard_metadata.egress_port": 3 },
-      "action_name": "MyEgress.set_swtrace_config",
-      "action_params": {
-        "swid": 3,
-        "final_host1": "0.0.0.0",
-        "final_host2": "0.0.0.0",
-        "telemetry_host": "10.0.3.3",
+        "telemetry_port": 1,
         "ecn_threshold": 500
       }
     },
