@@ -77,6 +77,7 @@ struct ingress_metadata_t {
 
 struct parser_metadata_t {
     bit<16>  remaining;
+    bit<1>  cloneable;
 }
 
 struct metadata {
@@ -140,7 +141,8 @@ parser MyParser(packet_in packet,
     }
 
     state parse_ipv4_option {
-        log_msg("parse_ipv4_option");
+        // log_msg("parse_ipv4_option");
+        meta.parser_metadata.cloneable = 1;
         packet.extract(hdr.ipv4_option);
         transition select(hdr.ipv4_option.option) {
             IPV4_OPTION_MRI: parse_mri;
@@ -152,6 +154,7 @@ parser MyParser(packet_in packet,
         // log_msg("parse_mri");
         packet.extract(hdr.mri);
         meta.parser_metadata.remaining = hdr.mri.count;
+
         transition select(meta.parser_metadata.remaining) {
             0 : accept;
             default: parse_swtrace;
@@ -208,11 +211,11 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
-
-        clone_preserving_field_list(CloneType.I2E,(bit<32>)99,(bit<8>)1);       
     }
 
-    action do_clone() {
+    action do_clone(ip4Addr_t sinkAddr) {
+        ip4Addr_t temp = hdr.ipv4.dstAddr;
+        hdr.ipv4.dstAddr = (ip4Addr_t) sinkAddr;
         clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
         hdr.mri.setInvalid();
         hdr.swtraces[0].setInvalid();
@@ -224,7 +227,9 @@ control MyIngress(inout headers hdr,
         hdr.swtraces[6].setInvalid();
         hdr.swtraces[7].setInvalid();
         hdr.swtraces[8].setInvalid();
-        // can we remove it here or will it also remove the header from the clone?
+        hdr.ipv4.ihl = (bit<4>) 5;
+        hdr.ipv4_option.setInvalid();
+        hdr.ipv4.dstAddr = temp; //maybe also set mac?
     }
 
      
@@ -259,7 +264,11 @@ control MyIngress(inout headers hdr,
     apply {
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
-            last_hop.apply();
+
+            if( meta.parser_metadata.cloneable == 1 ){
+                last_hop.apply();
+            }
+           
         }
     }
 }
@@ -272,13 +281,9 @@ control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {                
     action add_swtrace(switchID_t swid, bit<32> ecn_threshold) {
-        log_msg("add_swtrace");
+        // log_msg("add_swtrace");
         hdr.mri.count = hdr.mri.count + 1;
         hdr.swtraces.push_front(1);
-        // According to the P4_16 spec, pushed elements are invalid, so we need
-        // to call setValid(). Older bmv2 versions would mark the new header(s)
-        // valid automatically (P4_14 behavior), but starting with version 1.11,
-        // bmv2 conforms with the P4_16 spec.
         hdr.swtraces[0].setValid();
         hdr.swtraces[0].swid = swid;
         hdr.swtraces[0].qdepth = (qdepth_t)standard_metadata.deq_qdepth;
@@ -303,33 +308,11 @@ control MyEgress(inout headers hdr,
         default_action = NoAction();
     }
 
-    // register<bit<32>>(128) myReg;
-
-
     apply {
         if (hdr.mri.isValid()) {
             swtrace.apply();
         }
     }
-
-    // apply {
-        // log_msg("standard_metadata.instance_type={}",{standard_metadata.instance_type });
-        // if (hdr.mri.isValid()) {
-            // swtrace_config.apply();
-
-            // if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
-                // add_swtrace();
-
-                //  if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
-                //         log_msg("I got called standard_metadata.instance_type={}", {standard_metadata.instance_type});
-                //         redirect_clone_to_telemetry();
-                //     } else {
-                //          log_msg("else strip_telemetry_headers standard_metadata.instance_type={}", {standard_metadata.instance_type});
-                //         strip_telemetry_headers();
-                //     }
-//             }
-//         }
-//     }
 }
 
 /*************************************************************************
@@ -354,10 +337,6 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
               hdr.ipv4.dstAddr },
             hdr.ipv4.hdrChecksum,
             HashAlgorithm.csum16);
-
-
-        // update_checksum(hdr.icmp.isValid(), {hdr.icmp.type,hdr.icmp.subtype,hdr.icmp.variable},hdr.icmp.checksum, HashAlgorithm.csum16);
-        // Checksum: 0x3d6a incorrect, should be 0x0729
     }
 }
 
