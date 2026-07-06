@@ -60,7 +60,7 @@ header ipv4_option_t {
 
 header mri_t {
     bit<16>  count;
-    // bit<32>  originalDstAddr;
+    bit<32>  originalDstAddr;
 }
 
 header switch_t {
@@ -277,7 +277,7 @@ control MyEgress(inout headers hdr,
     action redirect_clone_to_telemetry() {
         // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
 
-        // hdr.mri.originalDstAddr = hdr.ipv4.dstAddr;
+        hdr.mri.originalDstAddr = hdr.ipv4.dstAddr;
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
         // ethernet mac? 
         standard_metadata.egress_spec = meta.egress_metadata.telemetry_port;//port;

@@ -43,14 +43,14 @@ def random_sentence():
     return random.choice(SENTENCES)
 
 
-def random_paragraph(min_sent=1, max_sent=50):
+def random_paragraph(min_sent=1, max_sent=5):
     return " ".join(
         random_sentence()
         for _ in range(random.randint(min_sent, max_sent))
     )
 
 
-def random_noise_text(min_words=3, max_words=30):
+def random_noise_text(min_words=3, max_words=20):
     return " ".join(
         random.choice(WORDS)
         for _ in range(random.randint(min_words, max_words))
@@ -66,19 +66,6 @@ def generate_payload():
     else:
         return random_noise_text()
 
-def validate_ips(ips):
-    valid_ips = load_ips_from_topology("topology.json")
-    print(f"valid_ips: {valid_ips}")
-
-    if not ips:
-        print("No hosts ips found in topology.json")
-        return
-
-        # Validate SEND_TO_HOSTS
-    missing_ips = [missing_ip for missing_ip in ips if missing_ip not in valid_ips]
-    if missing_ips:
-        raise ValueError(f"Hosts not found in topology: {', '.join(missing_ips)}")
-
 # -----------------------------
 # Experiments
 # -----------------------------
@@ -93,12 +80,16 @@ EXPERIMENTS = [
 def main():
 
     # SEND_TO_HOSTS = ["10.0.1.1","10.0.2.2"]
-    SEND_TO_HOSTS = ["10.0.2.2"]
+    # SEND_TO_HOSTS = ["10.0.2.2","10.0.1.11"]
     TELEMETRY_HOST = "10.0.3.3"
 
-    validate_ips([*SEND_TO_HOSTS,TELEMETRY_HOST])
+    # validate_ips([*SEND_TO_HOSTS,TELEMETRY_HOST])
+    ips = load_ips_from_topology("topology.json")
+    print(f"ips: {ips}")
+
+    ips.remove(TELEMETRY_HOST)
     
-    print(f"can send to hosts: {SEND_TO_HOSTS}")
+    # print(f"can send to hosts: {SEND_TO_HOSTS}")
 
     for exp in EXPERIMENTS:
         print(f"\n=== Running {exp['name']} ===")
@@ -106,7 +97,7 @@ def main():
         for i in range(exp["count"]):
 
             # pick random destination host
-            ip = random.choice(SEND_TO_HOSTS)
+            ip = random.choice(ips)
 
             # generate payload
             payload = generate_payload()

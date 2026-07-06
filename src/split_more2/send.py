@@ -47,6 +47,7 @@ class IPOption_MRI(IPOption):
                                   length_of="swtraces",
                                   adjust=lambda pkt,l:l*2+4),
                     ShortField("count", 0),
+                    IntField("originalDstAddr", 0),                    
                     PacketListField("swtraces",
                                    [],
                                    SwitchTrace,

@@ -8,7 +8,7 @@ from scapy.all import (
 )    # IP,
 from scapy.layers.inet import IP
 from scapy.packet import Packet
-
+from scapy.utils import ltoa
 
 LOG_FILE = "packets.log"
 
@@ -52,7 +52,21 @@ def extract_packet_info(pkt:Packet):
 
         if IP in pkt and pkt[IP].options:
 
+            print("hi")
+            print(pkt[IP].options)
+            
+
             for option in pkt[IP].options:
+
+                if hasattr(option, "originalDstAddr"):
+                    # print("originalDstAddr")
+                    # print(option.originalDstAddr)
+                    # ip_string = option.originalDstAddr
+                    ip_string = ltoa(option.originalDstAddr)
+                    # print(ip_string)
+                    entry["originalDstAddr"] = ip_string
+
+
 
                 if hasattr(option, "swtraces"):
 
