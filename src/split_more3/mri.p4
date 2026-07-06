@@ -1,0 +1,390 @@
+/* -*- P4_16 -*- */
+#include <core.p4>
+#include <v1model.p4>
+
+const bit<8>  UDP_PROTOCOL = 0x11;
+const bit<16> TYPE_IPV4 = 0x800;
+const bit<5>  IPV4_OPTION_MRI = 31;
+
+// const bit<8> BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE = 1;
+// https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
+// #define PKT_INSTANCE_TYPE_NORMAL 0
+#define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
+// #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
+// #define PKT_INSTANCE_TYPE_COALESCED 3
+// #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
+// #define PKT_INSTANCE_TYPE_REPLICATION 5
+// #define PKT_INSTANCE_TYPE_RESUBMIT 6
+
+#define MAX_HOPS 9
+
+/*************************************************************************
+*********************** H E A D E R S  ***********************************
+*************************************************************************/
+
+typedef bit<9>  egressSpec_t;
+typedef bit<48> macAddr_t;
+typedef bit<32> ip4Addr_t;
+typedef bit<32> switchID_t;
+typedef bit<32> qdepth_t;
+typedef bit<32> qtime_t;
+typedef bit<32> ingress_ts_t;
+
+header ethernet_t {
+    macAddr_t dstAddr;
+    macAddr_t srcAddr;
+    bit<16>   etherType;
+}
+
+header ipv4_t {
+    bit<4>    version;
+    bit<4>    ihl;
+    bit<8>    diffserv;
+    bit<16>   totalLen;
+    bit<16>   identification;
+    bit<3>    flags;
+    bit<13>   fragOffset;
+    bit<8>    ttl;
+    bit<8>    protocol;
+    bit<16>   hdrChecksum;
+    ip4Addr_t srcAddr;
+    ip4Addr_t dstAddr;
+}
+
+header ipv4_option_t {
+    bit<1> copyFlag;
+    bit<2> optClass;
+    bit<5> option;
+    bit<8> optionLength;
+}
+
+header mri_t {
+    bit<16>  count;
+    bit<32>  originalDstAddr;
+}
+
+header switch_t {
+    switchID_t  swid;
+    qdepth_t    qdepth;
+    ingress_ts_t ingress_ts;
+    qtime_t qtime;
+}
+// header debug_t {
+//     bit<8> marker;
+// }
+
+struct ingress_metadata_t {
+    bit<16>  count;
+}
+
+struct parser_metadata_t {
+    bit<16>  remaining;
+}
+
+struct egress_metadata_t {
+    switchID_t  swid;
+    ip4Addr_t   final_host1;
+    ip4Addr_t   final_host2;
+    ip4Addr_t   telemetry_host;
+    egressSpec_t   telemetry_port;
+    qtime_t     ecn_threshold;
+}
+
+struct metadata {
+    ingress_metadata_t   ingress_metadata;
+    parser_metadata_t   parser_metadata;
+    egress_metadata_t    egress_metadata;
+}
+
+struct headers {
+    ethernet_t         ethernet;
+    ipv4_t             ipv4;
+    ipv4_option_t      ipv4_option;
+    mri_t              mri;
+    switch_t[MAX_HOPS] swtraces;
+    // debug_t            debug;
+}
+
+
+
+error { IPHeaderTooShort }
+
+/*************************************************************************
+*********************** P A R S E R  ***********************************
+*************************************************************************/
+
+parser MyParser(packet_in packet,
+                out headers hdr,
+                inout metadata meta,
+                inout standard_metadata_t standard_metadata) {
+
+    state start {
+        transition parse_ethernet;
+    }
+
+    state parse_ethernet {
+        packet.extract(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            TYPE_IPV4: parse_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_ipv4 {
+        packet.extract(hdr.ipv4);
+        verify(hdr.ipv4.ihl >= 5, error.IPHeaderTooShort);
+        transition select(hdr.ipv4.ihl) {
+            5             : accept;
+            default       : parse_ipv4_option;
+        }
+    }
+
+    state parse_ipv4_option {
+        packet.extract(hdr.ipv4_option);
+        transition select(hdr.ipv4_option.option) {
+            IPV4_OPTION_MRI: parse_mri;
+            default: accept;
+        }
+    }
+
+    state parse_mri {
+        packet.extract(hdr.mri);
+        meta.parser_metadata.remaining = hdr.mri.count;
+        transition select(meta.parser_metadata.remaining) {
+            0 : accept;
+            default: parse_swtrace;
+        }
+    }
+
+    state parse_swtrace {
+        packet.extract(hdr.swtraces.next);
+        meta.parser_metadata.remaining = meta.parser_metadata.remaining  - 1;
+        transition select(meta.parser_metadata.remaining) {
+            0 : accept;
+            default: parse_swtrace;
+        }
+    }
+}
+
+
+/*************************************************************************
+************   C H E C K S U M    V E R I F I C A T I O N   *************
+*************************************************************************/
+
+control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
+    apply {  }
+}
+
+
+/*************************************************************************
+**************  I N G R E S S   P R O C E S S I N G   *******************
+*************************************************************************/
+
+control MyIngress(inout headers hdr,
+                  inout metadata meta,
+                  inout standard_metadata_t standard_metadata) {
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
+        standard_metadata.egress_spec = port;
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+    // action swtraces_forward(){ // where do we define the table for the controll plane
+    //     // if(is_at_final_switch){
+    //         //copy twiche 1 for packet without telemetry header and 1 without payload
+    //     // }
+    // }
+
+    action do_clone() {
+        clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
+    }
+
+    table ipv4_lpm {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            ipv4_forward;
+            drop;
+            NoAction;
+        }
+        size = 1024;
+        default_action = NoAction();
+    }
+
+    table last_hop {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            do_clone;
+            NoAction;
+        }
+        size = 64;
+        default_action = NoAction();
+    }
+
+    apply {
+        if (hdr.ipv4.isValid()) {
+            ipv4_lpm.apply();
+            last_hop.apply();
+        }
+    }
+}
+
+/*************************************************************************
+****************  E G R E S S   P R O C E S S I N G   *******************
+*************************************************************************/
+
+control MyEgress(inout headers hdr,
+                 inout metadata meta,
+                 inout standard_metadata_t standard_metadata) {
+
+    action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
+                               ip4Addr_t final_host2, ip4Addr_t telemetry_host,egressSpec_t telemetry_port,
+                               qtime_t ecn_threshold) {
+        meta.egress_metadata.swid           = swid;
+        meta.egress_metadata.final_host1    = final_host1;
+        meta.egress_metadata.final_host2    = final_host2;
+        meta.egress_metadata.telemetry_host = telemetry_host;
+        meta.egress_metadata.telemetry_port = telemetry_port;
+        meta.egress_metadata.ecn_threshold  = ecn_threshold;
+    }
+
+    // Unconditional inside its own body -- never guarded by if/return here.
+    action add_swtrace() {
+        hdr.mri.count = hdr.mri.count + 1;
+        hdr.swtraces.push_front(1);
+        hdr.swtraces[0].setValid();
+        hdr.swtraces[0].swid       = meta.egress_metadata.swid;
+        hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
+        hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
+        hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
+
+        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold) {
+            hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
+        }
+
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
+        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
+    }
+
+    action redirect_clone_to_telemetry() {
+        // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
+
+        hdr.mri.originalDstAddr = hdr.ipv4.dstAddr;
+        hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
+        // ethernet mac? 
+        standard_metadata.egress_spec = meta.egress_metadata.telemetry_port;//port;
+        
+        
+        // hdr.debug.setValid();
+        // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
+    }
+
+    action strip_telemetry_headers() {
+        hdr.mri.setInvalid(); // uncomment later
+        hdr.swtraces[0].setInvalid();
+        hdr.swtraces[1].setInvalid();
+        hdr.swtraces[2].setInvalid();
+        hdr.swtraces[3].setInvalid();
+        hdr.swtraces[4].setInvalid();
+        hdr.swtraces[5].setInvalid();
+        hdr.swtraces[6].setInvalid();
+        hdr.swtraces[7].setInvalid();
+        hdr.swtraces[8].setInvalid();
+        hdr.ipv4_option.setInvalid(); // uncomment later
+        // hdr.ipv4.ihl = 5;
+        hdr.ipv4.ihl = (bit<4>) 5;
+        // hdr.ipv4.totalLen = hdr.ipv4.totalLen - (bit<16>) 4;
+
+        // hdr.debug.setValid();
+        // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
+    }
+
+    table swtrace_config {
+        key = {
+            standard_metadata.egress_port: exact;
+        }
+        actions = { set_swtrace_config; NoAction; }
+        size = 64;
+        default_action = NoAction();
+    }
+
+    apply {
+        if (hdr.mri.isValid()) {
+            swtrace_config.apply();
+
+            if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
+                add_swtrace();
+
+                if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
+                    hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
+                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+                        redirect_clone_to_telemetry();
+                    } else {
+                        strip_telemetry_headers();
+                    }
+                }
+            }
+        }
+    }
+}
+
+/*************************************************************************
+*************   C H E C K S U M    C O M P U T A T I O N   **************
+*************************************************************************/
+
+control MyComputeChecksum(inout headers hdr, inout metadata meta) {
+     apply {
+        update_checksum(
+            hdr.ipv4.isValid(),
+            { hdr.ipv4.version,
+              hdr.ipv4.ihl,
+              hdr.ipv4.diffserv,
+              hdr.ipv4.totalLen,
+              hdr.ipv4.identification,
+              hdr.ipv4.flags,
+              hdr.ipv4.fragOffset,
+              hdr.ipv4.ttl,
+              hdr.ipv4.protocol,
+              hdr.ipv4.srcAddr,
+              hdr.ipv4.dstAddr },
+            hdr.ipv4.hdrChecksum,
+            HashAlgorithm.csum16);
+    }
+}
+
+/*************************************************************************
+***********************  D E P A R S E R  *******************************
+*************************************************************************/
+
+control MyDeparser(packet_out packet, in headers hdr) {
+    apply {
+        packet.emit(hdr.ethernet);
+        packet.emit(hdr.ipv4);
+        packet.emit(hdr.ipv4_option);
+        packet.emit(hdr.mri);
+        packet.emit(hdr.swtraces);
+        // packet.emit(hdr.debug);
+
+    }
+}
+
+/*************************************************************************
+***********************  S W I T C H  *******************************
+*************************************************************************/
+
+V1Switch(
+MyParser(),
+MyVerifyChecksum(),
+MyIngress(),
+MyEgress(),
+MyComputeChecksum(),
+MyDeparser()
+) main;
