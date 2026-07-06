@@ -75,6 +75,7 @@ header switch_t {
 
 struct ingress_metadata_t {
     bit<16>  count;
+    // bit<48>  ingress_ts;
 }
 
 struct parser_metadata_t {
@@ -88,6 +89,7 @@ struct egress_metadata_t {
     ip4Addr_t   telemetry_host;
     egressSpec_t   telemetry_port;
     qtime_t     ecn_threshold;
+    // bit<48>  ingress_ts;
 }
 
 struct metadata {
@@ -229,6 +231,9 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
+        // meta.ingress_metadata.ingress_ts = standard_metadata.ingress_global_timestamp;
+        // log_msg("MyIngress_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
+        // log_msg("MyIngress_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
             last_hop.apply();
@@ -262,8 +267,22 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].setValid();
         hdr.swtraces[0].swid       = meta.egress_metadata.swid;
         hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
-        hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
+        hdr.swtraces[0].ingress_ts = (ingress_ts_t) meta.egress_metadata.ingress_ts; //meta.ingress_metadata.ingress_ts; //standard_metadata.ingress_global_timestamp; // 
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
+
+
+        //  log_msg("add_swtrace_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
+        //  log_msg("add_swtrace_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
+        //  log_msg("add_swtrace_trunkated_meta.ingress_metadata.ingress_ts={}",{(ingress_ts_t)  meta.ingress_metadata.ingress_ts});
+        //  log_msg("add_swtrace_trunkated_add_swtrace_standard_metadatagress_ts={}",{(ingress_ts_t)  standard_metadata.ingress_global_timestamp});
+
+        // log_msg("MyEgress3_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
+        // log_msg("MyEgress3_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
+        // log_msg("MyEgress044_meta.ingress_metadata.ingress_ts={}",{ meta.egress_metadata.ingress_ts});
+
+        // bit<48> diff = standard_metadata.egress_global_timestamp -  standard_metadata.ingress_global_timestamp;
+        //  log_msg("diff={}",{diff});
+
 
         if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold) {
             hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
@@ -317,8 +336,16 @@ control MyEgress(inout headers hdr,
     }
 
     apply {
+        // meta.egress_metadata.ingress_ts = standard_metadata.ingress_global_timestamp;
+        // log_msg("MyEgress01_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
+        // log_msg("MyEgress02_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
+        // log_msg("MyEgress03_meta.ingress_metadata.ingress_ts={}",{meta.egress_metadata.ingress_ts});
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
+
+        // log_msg("MyEgress2_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
+        // log_msg("MyEgress2_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
+        // log_msg("MyEgress04_meta.ingress_metadata.ingress_ts={}",{meta.egress_metadata.ingress_ts});
 
             if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
                 add_swtrace();

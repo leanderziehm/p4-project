@@ -86,7 +86,7 @@ def main():
             ip = random.choice(ips)
             payload = generate_payload()
             payload = payload.replace("\n", " ")
-            max_len = 1453
+            max_len = 1353
             payload = payload[:max_len]
             time.sleep(interval)
             print(f"[n={name}]/c={count} i={interval} -> ({ip}) ")
