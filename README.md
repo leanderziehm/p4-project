@@ -22,14 +22,17 @@ in mininet
 xterm h1 h2 h3
 ```
 
-in h1 terminal:
-```
-./send.py 10.0.2.2 "P4 is cool" 30
-```
 in h2 and h3 terminal:
 ```
 ./receive.py
 ```
+then
+
+in h1 terminal:
+```
+./send.py 10.0.2.2 "P4 is cool" 30
+```
+
 ##  2. Step
 
 install elasticsearch:
@@ -88,3 +91,10 @@ does debug header work?
 # TODO 
 
 before sumbit figur out why text is trunkated when setting mri and switchtraches to invalid.
+
+
+kibana dashboard.
+figure out why its cut off in h2.
+Biggest goal make demo work. new topology. Different topology to make it work for real.
+consjestion and delay and send experiment. 
+add data for tracking.

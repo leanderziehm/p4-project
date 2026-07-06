@@ -42,6 +42,7 @@ RUN apt-get install tmux
 RUN apt-get install -y mininet
 RUN apt-get install -y vim
 RUN apt-get install x11-xserver-utils
+RUN python3 -m pip install "elasticsearch>=8,<9"
 USER p4
 WORKDIR /p4-project
 CMD ["/bin/bash"]

@@ -2,7 +2,7 @@
 *.zip
 others
 p4_ssh
-
+archive
 external
 indexed_hashes.json
 config.alloy.env
@@ -11,7 +11,7 @@ other
 output
 logs
 *.pcap
-*.png
+
 !topology.png
 
 
