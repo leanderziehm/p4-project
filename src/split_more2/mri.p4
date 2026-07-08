@@ -337,9 +337,9 @@ control MyEgress(inout headers hdr,
 
     apply {
         // meta.egress_metadata.ingress_ts = standard_metadata.ingress_global_timestamp;
-        // log_msg("MyEgress01_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
-        // log_msg("MyEgress02_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
-        // log_msg("MyEgress03_meta.ingress_metadata.ingress_ts={}",{meta.egress_metadata.ingress_ts});
+        log_msg("MyEgress01_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
+        log_msg("MyEgress02_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
+        log_msg("MyEgress03_meta.ingress_metadata.ingress_ts={}",{meta.egress_metadata.ingress_ts});
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
 

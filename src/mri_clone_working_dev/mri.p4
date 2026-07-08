@@ -230,6 +230,8 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ihl = (bit<4>) 5;
         hdr.ipv4_option.setInvalid();
         hdr.ipv4.dstAddr = temp; //maybe also set mac?
+
+        // test if this works properly that the clone is instant. 
     }
 
      
