@@ -147,3 +147,14 @@ add data for tracking.
         return links
 
 ```
+
+
+i feel like there should be one table for setting up metadata for that switch that it needs like sinkaddr. maybe in ingress.
+"action_params": {"sinkAddr":"10.0.3.3"}
+
+
+
+add one base condig for each switch to set variables.
+clone in egress.
+add bit for if packet is clone or not to mri header as well as original destination ip. 
+reroute packet. 

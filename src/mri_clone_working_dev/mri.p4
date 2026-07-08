@@ -8,7 +8,17 @@ const bit<8>  PROTOCOL_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
 
-#define MAX_HOPS 9
+#define MAX_HOPS 9 // max 2 hops only!
+// #define MAX_HOPS 2
+
+// https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch#standard-metadata
+#define PKT_INSTANCE_TYPE_NORMAL 0
+#define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
+// #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
+// #define PKT_INSTANCE_TYPE_COALESCED 3
+// #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
+// #define PKT_INSTANCE_TYPE_REPLICATION 5
+// #define PKT_INSTANCE_TYPE_RESUBMIT 6
 
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
@@ -213,24 +223,28 @@ control MyIngress(inout headers hdr,
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
 
-    action do_clone(ip4Addr_t sinkAddr) {
-        ip4Addr_t temp = hdr.ipv4.dstAddr;
-        hdr.ipv4.dstAddr = (ip4Addr_t) sinkAddr;
+    action do_clone(ip4Addr_t sinkAddr,egressSpec_t sinkPort) {
+      
         clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
-        hdr.mri.setInvalid();
-        hdr.swtraces[0].setInvalid();
-        hdr.swtraces[1].setInvalid();
-        hdr.swtraces[2].setInvalid();
-        hdr.swtraces[3].setInvalid();
-        hdr.swtraces[4].setInvalid();
-        hdr.swtraces[5].setInvalid();
-        hdr.swtraces[6].setInvalid();
-        hdr.swtraces[7].setInvalid();
-        hdr.swtraces[8].setInvalid();
-        hdr.ipv4.ihl = (bit<4>) 5;
-        hdr.ipv4_option.setInvalid();
-        hdr.ipv4.dstAddr = temp; //maybe also set mac?
-
+        // hdr.mri.setInvalid();
+        // hdr.swtraces[0].setInvalid();
+        // hdr.swtraces[1].setInvalid();
+        // hdr.swtraces[2].setInvalid();
+        // hdr.swtraces[3].setInvalid();
+        // hdr.swtraces[4].setInvalid();
+        // hdr.swtraces[5].setInvalid();
+        // hdr.swtraces[6].setInvalid();
+        // hdr.swtraces[7].setInvalid();
+        // hdr.swtraces[8].setInvalid();
+        // hdr.ipv4.ihl = (bit<4>) 5;
+        // hdr.ipv4_option.setInvalid();
+        // hdr.ipv4.dstAddr = temp; //maybe also set mac?
+        // if (hdr.ipv4.ttl > 99){
+        // ip4Addr_t temp = hdr.ipv4.dstAddr;
+        // hdr.ipv4.dstAddr = (ip4Addr_t) sinkAddr;
+        // hdr.ethernet.port = (ip4Addr_t) sinkPort;
+        // standard_metadata.egress_spec = sinkPort;
+        // }
         // test if this works properly that the clone is instant. 
     }
 
@@ -311,6 +325,15 @@ control MyEgress(inout headers hdr,
     }
 
     apply {
+
+        log_msg("standard_metadata.instance_type={}",{standard_metadata.instance_type});
+
+        if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE){
+            log_msg("found ingress CLONE={}",{standard_metadata.instance_type});
+        }else if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_NORMAL){
+             log_msg("normal packet={}",{standard_metadata.instance_type});
+        }   
+
         if (hdr.mri.isValid()) {
             swtrace.apply();
         }
