@@ -124,8 +124,7 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-                    // ECMP ip source dest , source dest tcp/udp port?, 
-    apply { log_msg("hdr.ipv4.dstAddr={}",{hdr.ipv4.dstAddr}); }
+    apply {log_msg("hdr.ipv4.dstAddr={}",{hdr.ipv4.dstAddr}); }
 }
 
 /*************************************************************************

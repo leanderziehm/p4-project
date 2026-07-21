@@ -5,8 +5,8 @@ include ../../utils/Makefile
 
 all: build run
 
-run:
-	sudo python3 ../../utils/run_exercise.py -t topology.json -j build/mri.json -b simple_switch_grpc
+# run:
+# 	sudo python3 ../../utils/run_exercise.py -t topology.json -j build/mri.json -b simple_switch_grpc
 
 
 log_to_elastic_uv:

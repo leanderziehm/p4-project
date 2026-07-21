@@ -267,7 +267,7 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].setValid();
         hdr.swtraces[0].swid       = meta.egress_metadata.swid;
         hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
-        hdr.swtraces[0].ingress_ts = (ingress_ts_t) meta.egress_metadata.ingress_ts; //meta.ingress_metadata.ingress_ts; //standard_metadata.ingress_global_timestamp; // 
+        hdr.swtraces[0].ingress_ts = (ingress_ts_t) standard_metadata.ingress_global_timestamp; //meta.ingress_metadata.ingress_ts; //standard_metadata.ingress_global_timestamp; // 
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
 
 
@@ -337,9 +337,9 @@ control MyEgress(inout headers hdr,
 
     apply {
         // meta.egress_metadata.ingress_ts = standard_metadata.ingress_global_timestamp;
-        log_msg("MyEgress01_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
-        log_msg("MyEgress02_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
-        log_msg("MyEgress03_meta.ingress_metadata.ingress_ts={}",{meta.egress_metadata.ingress_ts});
+        // log_msg("MyEgress01_standard_metadata.ingress_global_timestamp={}",{standard_metadata.ingress_global_timestamp});
+        // log_msg("MyEgress02_meta.ingress_metadata.ingress_ts={}",{meta.ingress_metadata.ingress_ts});
+        // log_msg("MyEgress03_meta.ingress_metadata.ingress_ts={}",{meta.egress_metadata.ingress_ts});
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
 
