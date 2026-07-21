@@ -298,7 +298,7 @@ control MyEgress(inout headers hdr,
             swtrace_config.apply();
             if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
                 add_swtrace();
-                if (hdr.mri.isClone ==  (bit<32>) 11 ){
+                if (hdr.mri.isClone ==  (bit<32>) 0 ){
                     clone_on_last_hop.apply();
                 }
                 // if (meta.cloneable == 1){
