@@ -15,7 +15,7 @@ const bit<5>  IPV4_OPTION_MRI = 31;
 // https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
 // #define PKT_INSTANCE_TYPE_NORMAL 0
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
-// #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
+#define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 // #define PKT_INSTANCE_TYPE_COALESCED 3
 // #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
 // #define PKT_INSTANCE_TYPE_REPLICATION 5
@@ -230,18 +230,22 @@ control MyEgress(inout headers hdr,
                  inout standard_metadata_t standard_metadata) {
 
     action init_telemetry() {
+
         hdr.ipv4_option.setValid();
         hdr.mri.setValid();
 
-        hdr.ipv4_option.copyFlag     = 0;
-        hdr.ipv4_option.optClass     = 0;
-        hdr.ipv4_option.option       = IPV4_OPTION_MRI;
-        hdr.ipv4_option.optionLength = 4;   // MRI header only initially
+        hdr.ipv4_option.copyFlag = 0;
+        hdr.ipv4_option.optClass = 0;
+        hdr.ipv4_option.option = IPV4_OPTION_MRI;
 
         hdr.mri.count = 0;
         hdr.mri.isClone = 0;
-        
-        // hdr.mri.originalDstAddr = 0;
+
+        hdr.ipv4_option.optionLength = 12;
+
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 3;
+
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 12;
     }
 
     action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
@@ -289,6 +293,15 @@ control MyEgress(inout headers hdr,
     }
 
     action strip_telemetry_headers() {
+
+
+        bit<16> telemetry_bytes;
+
+        telemetry_bytes = 4 + 8 + (bit<16>)hdr.mri.count * 16;
+
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen - telemetry_bytes;
+    // hdr.ipv4.ihl = 5;
+
         hdr.mri.setInvalid(); // uncomment later
         hdr.swtraces[0].setInvalid();
         hdr.swtraces[1].setInvalid();
@@ -360,7 +373,7 @@ control MyEgress(inout headers hdr,
 
                 if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
                     hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
-                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
                        
                         redirect_clone_to_telemetry();
                     } else {
@@ -382,7 +395,7 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             hdr.ipv4.isValid(),
             { hdr.ipv4.version,
               hdr.ipv4.ihl,
-              hdr.ipv4.diffserv,
+              hdr.ipv4.diffserv, // todo ecn
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,
