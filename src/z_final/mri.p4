@@ -1,16 +1,11 @@
 /* -*- P4_16 -*- */
 #include <core.p4>
 #include <v1model.p4>
-
-
 const bit<8>  PROTOCOL_ICMP = 0x01;
 const bit<8>  PROTOCOL_TCP = 0x07;
 const bit<8>  PROTOCOL_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
-
-
-
 // const bit<8> BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE = 1;
 // https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
 // #define PKT_INSTANCE_TYPE_NORMAL 0
@@ -20,13 +15,10 @@ const bit<5>  IPV4_OPTION_MRI = 31;
 // #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
 // #define PKT_INSTANCE_TYPE_REPLICATION 5
 // #define PKT_INSTANCE_TYPE_RESUBMIT 6
-
 #define MAX_HOPS 9
-
 /*************************************************************************
 *********************** H E A D E R S  ***********************************
 *************************************************************************/
-
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
@@ -34,13 +26,11 @@ typedef bit<32> switchID_t;
 typedef bit<32> qdepth_t;
 typedef bit<32> qtime_t;
 typedef bit<32> ingress_ts_t;
-
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
 }
-
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
@@ -55,35 +45,29 @@ header ipv4_t {
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
 }
-
 header ipv4_option_t {
     bit<1> copyFlag;
     bit<2> optClass;
     bit<5> option;
     bit<8> optionLength;
 }
-
 header mri_t {
     bit<16>  count;
     // bit<32>  originalDstAddr;
     bit<32> isClone; 
 }
-
 header switch_t {
     switchID_t  swid;
     qdepth_t    qdepth;
     ingress_ts_t ingress_ts;
     qtime_t qtime;
 }
-
 struct ingress_metadata_t {
     bit<16>  count;
 }
-
 struct parser_metadata_t {
     bit<16>  remaining;
 }
-
 struct egress_metadata_t {
     switchID_t  swid;
     ip4Addr_t   final_host1;
@@ -92,14 +76,12 @@ struct egress_metadata_t {
     egressSpec_t   telemetry_port;
     qtime_t     ecn_threshold;
 }
-
 struct metadata {
     ingress_metadata_t   ingress_metadata;
     parser_metadata_t   parser_metadata;
     egress_metadata_t    egress_metadata;
     // bit<1>  cloneable;
 }
-
 struct headers {
     ethernet_t         ethernet;
     ipv4_t             ipv4;
@@ -108,24 +90,17 @@ struct headers {
     switch_t[MAX_HOPS] swtraces;
     // debug_t            debug;
 }
-
-
-
 error { IPHeaderTooShort }
-
 /*************************************************************************
 *********************** P A R S E R  ***********************************
 *************************************************************************/
-
 parser MyParser(packet_in packet,
                 out headers hdr,
                 inout metadata meta,
                 inout standard_metadata_t standard_metadata) {
-
     state start {
         transition parse_ethernet;
     }
-
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
@@ -133,7 +108,6 @@ parser MyParser(packet_in packet,
             default: accept;
         }
     }
-
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
         verify(hdr.ipv4.ihl >= 5, error.IPHeaderTooShort);
@@ -142,7 +116,6 @@ parser MyParser(packet_in packet,
             default       : parse_ipv4_option;
         }
     }
-
     state parse_ipv4_option {
         // meta.cloneable = 1;
         packet.extract(hdr.ipv4_option);
@@ -151,7 +124,6 @@ parser MyParser(packet_in packet,
             default: accept;
         }
     }
-
     state parse_mri {
         packet.extract(hdr.mri);
         meta.parser_metadata.remaining = hdr.mri.count;
@@ -160,7 +132,6 @@ parser MyParser(packet_in packet,
             default: parse_swtrace;
         }
     }
-
     state parse_swtrace {
         packet.extract(hdr.swtraces.next);
         meta.parser_metadata.remaining = meta.parser_metadata.remaining  - 1;
@@ -170,35 +141,27 @@ parser MyParser(packet_in packet,
         }
     }
 }
-
-
 /*************************************************************************
 ************   C H E C K S U M    V E R I F I C A T I O N   *************
 *************************************************************************/
-
 control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
     apply {  }
 }
-
-
 /*************************************************************************
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
-
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
     action drop() {
         mark_to_drop(standard_metadata);
     }
-
     action ipv4_forward(macAddr_t dstAddr, egressSpec_t port) {
         standard_metadata.egress_spec = port;
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
-
     table ipv4_lpm {
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -211,43 +174,30 @@ control MyIngress(inout headers hdr,
         size = 1024;
         default_action = NoAction();
     }
-
-
-
     apply {
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
         }
     }
 }
-
 /*************************************************************************
 ****************  E G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
-
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
-
     action init_telemetry() {
-
         hdr.ipv4_option.setValid();
         hdr.mri.setValid();
-
         hdr.ipv4_option.copyFlag = 0;
         hdr.ipv4_option.optClass = 0;
         hdr.ipv4_option.option = IPV4_OPTION_MRI;
-
         hdr.mri.count = 0;
         hdr.mri.isClone = 0;
-
         hdr.ipv4_option.optionLength = 12;
-
         hdr.ipv4.ihl = hdr.ipv4.ihl + 3;
-
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 12;
     }
-
     action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
                                ip4Addr_t final_host2, ip4Addr_t telemetry_host,egressSpec_t telemetry_port,
                                qtime_t ecn_threshold) {
@@ -258,7 +208,6 @@ control MyEgress(inout headers hdr,
         meta.egress_metadata.telemetry_port = telemetry_port;
         meta.egress_metadata.ecn_threshold  = ecn_threshold;
     }
-
     // Unconditional inside its own body -- never guarded by if/return here.
     action add_swtrace() {
         hdr.mri.count = hdr.mri.count + 1;
@@ -268,40 +217,31 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
         hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
-
         if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold) {
             hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
         }
-
         hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
         hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
     }
-
     action redirect_clone_to_telemetry() {
         // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
         hdr.mri.isClone = (bit<32>) 1;
-        
+
         // hdr.mri.originalDstAddr = hdr.ipv4.dstAddr;
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
         // ethernet mac? 
         standard_metadata.egress_spec = meta.egress_metadata.telemetry_port;//port;
-        
-        
+
+
         // hdr.debug.setValid();
         // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }
-
     action strip_telemetry_headers() {
-
-
         bit<16> telemetry_bytes;
-
         telemetry_bytes = 4 + 8 + (bit<16>)hdr.mri.count * 16;
-
         hdr.ipv4.totalLen = hdr.ipv4.totalLen - telemetry_bytes;
     // hdr.ipv4.ihl = 5;
-
         hdr.mri.setInvalid(); // uncomment later
         hdr.swtraces[0].setInvalid();
         hdr.swtraces[1].setInvalid();
@@ -316,11 +256,9 @@ control MyEgress(inout headers hdr,
         // hdr.ipv4.ihl = 5;
         hdr.ipv4.ihl = (bit<4>) 5;
         // hdr.ipv4.totalLen = hdr.ipv4.totalLen - (bit<16>) 4;
-
         // hdr.debug.setValid();
         // hdr.debug.marker = (bit<8>) 0xC1;   // proves: this is the clone, heading to telemetry
     }
-
     table swtrace_config {
         key = {
             standard_metadata.egress_port: exact;
@@ -329,7 +267,6 @@ control MyEgress(inout headers hdr,
         size = 64;
         default_action = NoAction();
     }
-
     action do_clone() {
         // hdr.mri.isClone = 0;
         clone_preserving_field_list(CloneType.E2E, (bit<32>)99, (bit<8>)1); //cloned packet starts again again at start of egress.
@@ -345,36 +282,27 @@ control MyEgress(inout headers hdr,
         size = 64;
         default_action = NoAction();
     }
-
-
-
     apply {
-        
-        if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
 
+        if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
                 if(hdr.ipv4.protocol != PROTOCOL_ICMP){
                 //   if(hdr.ipv4.protocol != PROTOCOL_ICMP && (hdr.ipv4.protocol == PROTOCOL_TCP || hdr.ipv4.protocol == PROTOCOL_UDP) ){
                         init_telemetry();
                     }
         }
-
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
-
             if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
                 add_swtrace();
-
                 if (hdr.mri.isClone ==  (bit<32>) 11 ){
                     clone_on_last_hop.apply();
                 }
-
                 // if (meta.cloneable == 1){
                 // }
-
                 if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
                     hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
                     if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
-                       
+
                         redirect_clone_to_telemetry();
                     } else {
                         strip_telemetry_headers();
@@ -384,11 +312,10 @@ control MyEgress(inout headers hdr,
         }
     }
 }
-
 /*************************************************************************
 *************   C H E C K S U M    C O M P U T A T I O N   **************
 *************************************************************************/
-                 
+
 control MyComputeChecksum(inout headers hdr, inout metadata meta) {
      apply {
         update_checksum(
@@ -408,11 +335,9 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             HashAlgorithm.csum16);
     }
 }
-
 /*************************************************************************
 ***********************  D E P A R S E R  *******************************
 *************************************************************************/
-
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
         packet.emit(hdr.ethernet);
@@ -421,14 +346,11 @@ control MyDeparser(packet_out packet, in headers hdr) {
         packet.emit(hdr.mri);
         packet.emit(hdr.swtraces);
         // packet.emit(hdr.debug);
-
     }
 }
-
 /*************************************************************************
 ***********************  S W I T C H  *******************************
 *************************************************************************/
-
 V1Switch(
 MyParser(),
 MyVerifyChecksum(),
