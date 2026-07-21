@@ -4,11 +4,15 @@
   "bmv2_json": "build/mri.json",
   "table_entries": [
     {
-      "table": "MyEgress.swtrace",
+      "table": "MyEgress.swtrace_config",
       "default_action": true,
-      "action_name": "MyEgress.add_swtrace",
+      "action_name": "MyEgress.set_swtrace_config",
       "action_params": {
-        "swid": 1,
+        "swid": 3,
+        "final_host1": "0.0.0.0",
+        "final_host2": "0.0.0.0",
+        "telemetry_host": "10.0.3.3",
+        "telemetry_port": 1,
         "ecn_threshold": 500
       }
     },
