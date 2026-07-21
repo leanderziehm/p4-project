@@ -194,9 +194,12 @@ control MyEgress(inout headers hdr,
         hdr.ipv4_option.option = IPV4_OPTION_MRI;
         hdr.mri.count = 0;
         hdr.mri.isClone = 0;
-        hdr.ipv4_option.optionLength = 12;
-        hdr.ipv4.ihl = hdr.ipv4.ihl + 3;
-        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 12;
+        // hdr.ipv4_option.optionLength = 12;
+        // hdr.ipv4.ihl = hdr.ipv4.ihl + 3;
+        // hdr.ipv4.totalLen = hdr.ipv4.totalLen + 12;
+        hdr.ipv4_option.optionLength = 8;
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 2;
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 8;
     }
     action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
                                ip4Addr_t final_host2, ip4Addr_t telemetry_host,egressSpec_t telemetry_port,
@@ -239,7 +242,8 @@ control MyEgress(inout headers hdr,
     }
     action strip_telemetry_headers() {
         bit<16> telemetry_bytes;
-        telemetry_bytes = 4 + 8 + (bit<16>)hdr.mri.count * 16;
+        // telemetry_bytes = 4 + 8 + (bit<16>)hdr.mri.count * 16;
+        telemetry_bytes = 8 + (bit<16>)hdr.mri.count * 16;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen - telemetry_bytes;
     // hdr.ipv4.ihl = 5;
         hdr.mri.setInvalid(); // uncomment later
