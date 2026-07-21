@@ -1,4 +1,7 @@
-2 split_more2:
+2 z_final:
+	cd src/z_final && make build && make run
+
+split_more2:
 	cd src/split_more2 && make build && make run
 
 3 run_elastic:
@@ -9,8 +12,10 @@
 
 # keep this in extra background terminal open
 0 sshtmux elastic:
+# 	tmux has-session -t ssh-tunnel 2>/dev/null && tmux attach -t ssh-tunnel || tmux new -s ssh-tunnel "ssh -i elastic_server/secret/elasticsearch_ssh_port_tunneling_user.pem -L 0.0.0.0:9200:localhost:9200 -L 0.0.0.0:5601:localhost:5601 ssh_port_tunneling_user@130.162.236.17"
 	tmux has-session -t ssh-tunnel 2>/dev/null && tmux attach -t ssh-tunnel || tmux new -s ssh-tunnel "ssh -i elastic_server/secret/elasticsearch_ssh_port_tunneling_user.pem -L 9200:localhost:9200 -L 5601:localhost:5601 ssh_port_tunneling_user@130.162.236.17"
 
+# ssh -i elastic_server/secret/elasticsearch_ssh_port_tunneling_user.pem ssh_port_tunneling_user@130.162.236.17
 
 8 9 basic:
 	cd src/basic && make build && make run

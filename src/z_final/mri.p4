@@ -2,9 +2,14 @@
 #include <core.p4>
 #include <v1model.p4>
 
-const bit<8>  UDP_PROTOCOL = 0x11;
+
+const bit<8>  PROTOCOL_ICMP = 0x01;
+const bit<8>  PROTOCOL_TCP = 0x07;
+const bit<8>  PROTOCOL_UDP = 0x11;
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<5>  IPV4_OPTION_MRI = 31;
+
+
 
 // const bit<8> BMV2_V1MODEL_INSTANCE_TYPE_INGRESS_CLONE = 1;
 // https://github.com/nsg-ethz/p4-learning/wiki/BMv2-Simple-Switch
@@ -60,7 +65,8 @@ header ipv4_option_t {
 
 header mri_t {
     bit<16>  count;
-    bit<32>  originalDstAddr;
+    // bit<32>  originalDstAddr;
+    bit<32> isClone; 
 }
 
 header switch_t {
@@ -69,9 +75,6 @@ header switch_t {
     ingress_ts_t ingress_ts;
     qtime_t qtime;
 }
-// header debug_t {
-//     bit<8> marker;
-// }
 
 struct ingress_metadata_t {
     bit<16>  count;
@@ -94,6 +97,7 @@ struct metadata {
     ingress_metadata_t   ingress_metadata;
     parser_metadata_t   parser_metadata;
     egress_metadata_t    egress_metadata;
+    // bit<1>  cloneable;
 }
 
 struct headers {
@@ -140,6 +144,7 @@ parser MyParser(packet_in packet,
     }
 
     state parse_ipv4_option {
+        // meta.cloneable = 1;
         packet.extract(hdr.ipv4_option);
         transition select(hdr.ipv4_option.option) {
             IPV4_OPTION_MRI: parse_mri;
@@ -193,15 +198,6 @@ control MyIngress(inout headers hdr,
         hdr.ethernet.dstAddr = dstAddr;
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
     }
-    // action swtraces_forward(){ // where do we define the table for the controll plane
-    //     // if(is_at_final_switch){
-    //         //copy twiche 1 for packet without telemetry header and 1 without payload
-    //     // }
-    // }
-
-    action do_clone() {
-        clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
-    }
 
     table ipv4_lpm {
         key = {
@@ -216,22 +212,11 @@ control MyIngress(inout headers hdr,
         default_action = NoAction();
     }
 
-    table last_hop {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            do_clone;
-            NoAction;
-        }
-        size = 64;
-        default_action = NoAction();
-    }
+
 
     apply {
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
-            last_hop.apply();
         }
     }
 }
@@ -243,6 +228,21 @@ control MyIngress(inout headers hdr,
 control MyEgress(inout headers hdr,
                  inout metadata meta,
                  inout standard_metadata_t standard_metadata) {
+
+    action init_telemetry() {
+        hdr.ipv4_option.setValid();
+        hdr.mri.setValid();
+
+        hdr.ipv4_option.copyFlag     = 0;
+        hdr.ipv4_option.optClass     = 0;
+        hdr.ipv4_option.option       = IPV4_OPTION_MRI;
+        hdr.ipv4_option.optionLength = 4;   // MRI header only initially
+
+        hdr.mri.count = 0;
+        hdr.mri.isClone = 0;
+        
+        // hdr.mri.originalDstAddr = 0;
+    }
 
     action set_swtrace_config(switchID_t swid, ip4Addr_t final_host1,
                                ip4Addr_t final_host2, ip4Addr_t telemetry_host,egressSpec_t telemetry_port,
@@ -276,8 +276,9 @@ control MyEgress(inout headers hdr,
 
     action redirect_clone_to_telemetry() {
         // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
-
-        hdr.mri.originalDstAddr = hdr.ipv4.dstAddr;
+        hdr.mri.isClone = (bit<32>) 1;
+        
+        // hdr.mri.originalDstAddr = hdr.ipv4.dstAddr;
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
         // ethernet mac? 
         standard_metadata.egress_spec = meta.egress_metadata.telemetry_port;//port;
@@ -316,16 +317,51 @@ control MyEgress(inout headers hdr,
         default_action = NoAction();
     }
 
+    action do_clone() {
+        // hdr.mri.isClone = 0;
+        clone_preserving_field_list(CloneType.E2E, (bit<32>)99, (bit<8>)1); //cloned packet starts again again at start of egress.
+    }
+    table clone_on_last_hop {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            do_clone;
+            NoAction;
+        }
+        size = 64;
+        default_action = NoAction();
+    }
+
+
+
     apply {
+        
+        if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
+
+                if(hdr.ipv4.protocol != PROTOCOL_ICMP){
+                //   if(hdr.ipv4.protocol != PROTOCOL_ICMP && (hdr.ipv4.protocol == PROTOCOL_TCP || hdr.ipv4.protocol == PROTOCOL_UDP) ){
+                        init_telemetry();
+                    }
+        }
+
         if (hdr.mri.isValid()) {
             swtrace_config.apply();
 
             if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
                 add_swtrace();
 
+                if (hdr.mri.isClone ==  (bit<32>) 11 ){
+                    clone_on_last_hop.apply();
+                }
+
+                // if (meta.cloneable == 1){
+                // }
+
                 if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
                     hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
                     if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
+                       
                         redirect_clone_to_telemetry();
                     } else {
                         strip_telemetry_headers();
@@ -339,7 +375,7 @@ control MyEgress(inout headers hdr,
 /*************************************************************************
 *************   C H E C K S U M    C O M P U T A T I O N   **************
 *************************************************************************/
-
+                 
 control MyComputeChecksum(inout headers hdr, inout metadata meta) {
      apply {
         update_checksum(

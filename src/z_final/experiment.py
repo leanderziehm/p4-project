@@ -73,7 +73,7 @@ EXPERIMENTS = [
 
 def main():
     TELEMETRY_HOST = "10.0.3.3"
-    ips = load_ips_from_topology("topology.json")
+    ips = load_ips_from_topology("topo/topology.json")
     print(f"ips: {ips}")
     ips.remove(TELEMETRY_HOST)
     for exp in EXPERIMENTS:
