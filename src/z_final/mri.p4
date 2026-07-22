@@ -169,9 +169,30 @@ control MyIngress(inout headers hdr,
         size = 1024;
         default_action = NoAction();
     }
+    action do_clone() {
+        // Clone at END OF INGRESS (I2E) so the copy still carries the full swtrace
+        // stack from previous hops. The clone re-runs egress with instance_type ==
+        // INGRESS_CLONE and gets redirected to the telemetry collector; the original
+        // continues to its real destination where it is stripped.
+        clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
+    }
+    table clone_on_last_hop {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            do_clone;
+            NoAction;
+        }
+        size = 64;
+        default_action = NoAction();
+    }
     apply {
         if (hdr.ipv4.isValid()) {
             ipv4_lpm.apply();
+            // If this is the last hop for a local host, mirror a full-telemetry
+            // copy to the collector before egress strips the original.
+            clone_on_last_hop.apply();
         }
     }
 }
@@ -254,20 +275,6 @@ control MyEgress(inout headers hdr,
         size = 64;
         default_action = NoAction();
     }
-    action do_clone() {
-        clone_preserving_field_list(CloneType.E2E, (bit<32>)99, (bit<8>)1); //cloned packet starts again again at start of egress.
-    }
-    table clone_on_last_hop {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            do_clone;
-            NoAction;
-        }
-        size = 64;
-        default_action = NoAction();
-    }
     apply {
 
         if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
@@ -279,13 +286,12 @@ control MyEgress(inout headers hdr,
             swtrace_config.apply();
             if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
                 add_swtrace();
-                if (hdr.mri.isClone ==  (bit<32>) 0 && standard_metadata.instance_type != PKT_INSTANCE_TYPE_EGRESS_CLONE ){
-                    clone_on_last_hop.apply();
-                }
                 if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
                     hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
-                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
-
+                    // The telemetry copy is an I2E clone taken at INGRESS of the last
+                    // hop, so it still carries the full swtrace stack. The original is
+                    // stripped and delivered; the clone is redirected to the collector.
+                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
                         redirect_clone_to_telemetry();
                     } else {
                         strip_telemetry_headers();

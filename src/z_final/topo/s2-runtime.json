@@ -18,13 +18,13 @@
     },
   
     {
-      "table": "MyEgress.clone_on_last_hop",
+      "table": "MyIngress.clone_on_last_hop",
       "match": { "hdr.ipv4.dstAddr": ["10.0.2.2", 32] },
       "action_name": "MyEgress.do_clone",
       "action_params": {}
     },
     {
-      "table": "MyEgress.clone_on_last_hop",
+      "table": "MyIngress.clone_on_last_hop",
       "match": { "hdr.ipv4.dstAddr": ["10.0.2.22", 32] },
       "action_name": "MyEgress.do_clone",
       "action_params": {}
