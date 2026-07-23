@@ -11,7 +11,7 @@ const bit<5>  IPV4_OPTION_MRI = 31;
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 // #define PKT_INSTANCE_TYPE_COALESCED 3
-// #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
+#define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
 // #define PKT_INSTANCE_TYPE_REPLICATION 5
 // #define PKT_INSTANCE_TYPE_RESUBMIT 6
 #define MAX_HOPS 9
@@ -169,30 +169,12 @@ control MyIngress(inout headers hdr,
         size = 1024;
         default_action = NoAction();
     }
-    action do_clone() {
-        // Clone at END OF INGRESS (I2E) so the copy still carries the full swtrace
-        // stack from previous hops. The clone re-runs egress with instance_type ==
-        // INGRESS_CLONE and gets redirected to the telemetry collector; the original
-        // continues to its real destination where it is stripped.
-        clone_preserving_field_list(CloneType.I2E, (bit<32>)99, (bit<8>)1);
-    }
-    table clone_on_last_hop {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            do_clone;
-            NoAction;
-        }
-        size = 64;
-        default_action = NoAction();
-    }
     apply {
         if (hdr.ipv4.isValid()) {
+            // Forwarding only. The last-hop clone/strip is decided in egress, where
+            // the per-hop queue metrics are actually available. On the recirculated
+            // pass this simply re-sets egress_spec toward the real host.
             ipv4_lpm.apply();
-            // If this is the last hop for a local host, mirror a full-telemetry
-            // copy to the collector before egress strips the original.
-            clone_on_last_hop.apply();
         }
     }
 }
@@ -277,24 +259,40 @@ control MyEgress(inout headers hdr,
     }
     apply {
 
-        if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
-                if(hdr.ipv4.protocol != PROTOCOL_ICMP){ //&& (hdr.ipv4.protocol == PROTOCOL_TCP || hdr.ipv4.protocol == PROTOCOL_UDP) ){
-                        init_telemetry();
-                    }
-        }
-        if (hdr.mri.isValid()) {
+        // (A) COLLECTOR COPY. This is the E2E clone taken at the end of the last
+        // hop's normal egress pass, BEFORE any stripping, so it still carries the
+        // full swtrace stack WITH the real last-hop metrics (measured on the port
+        // toward the actual host). Just redirect it to the telemetry collector.
+        if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
             swtrace_config.apply();
-            if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
-                add_swtrace();
-                if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
-                    hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
-                    // The telemetry copy is an I2E clone taken at INGRESS of the last
-                    // hop, so it still carries the full swtrace stack. The original is
-                    // stripped and delivered; the clone is redirected to the collector.
-                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_CLONE) {
-                        redirect_clone_to_telemetry();
-                    } else {
-                        strip_telemetry_headers();
+            redirect_clone_to_telemetry();
+        }
+        // (B) RECIRCULATED ORIGINAL. The last hop already measured this packet and
+        // mirrored a full copy to the collector; now strip telemetry and deliver a
+        // clean packet to the host.
+        else if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC) {
+            strip_telemetry_headers();
+        }
+        // (C) NORMAL FORWARDING. Accumulate this hop's telemetry.
+        else {
+            if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
+                if(hdr.ipv4.protocol != PROTOCOL_ICMP){ //&& (hdr.ipv4.protocol == PROTOCOL_TCP || hdr.ipv4.protocol == PROTOCOL_UDP) ){
+                    init_telemetry();
+                }
+            }
+            if (hdr.mri.isValid()) {
+                swtrace_config.apply();
+                if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
+                    add_swtrace();  // measures THIS egress port = the real delivery path
+                    if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
+                        hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
+                        // Last hop. The packet now holds the full, real-measured stack.
+                        //  1) E2E-clone it to the collector. The clone snapshot is taken
+                        //     at the end of THIS pass and we do NOT strip here, so the
+                        //     collector copy is complete and faithful.
+                        //  2) recirculate this original so pass (B) can strip + deliver it.
+                        clone_preserving_field_list(CloneType.E2E, (bit<32>)99, (bit<8>)1);
+                        recirculate_preserving_field_list((bit<8>)0);
                     }
                 }
             }
