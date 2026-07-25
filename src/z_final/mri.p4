@@ -263,12 +263,16 @@ control MyEgress(inout headers hdr,
     }
     apply {
 
+         if (hdr.mri.isValid()) {
+            swtrace_config.apply();
+         }
+
         // (A) COLLECTOR COPY. This is the E2E clone taken at the end of the last
         // hop's normal egress pass, BEFORE any stripping, so it still carries the
         // full swtrace stack WITH the real last-hop metrics (measured on the port
         // toward the actual host). Just redirect it to the telemetry collector.
         if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
-            swtrace_config.apply();
+            // swtrace_config.apply();
             redirect_clone_to_telemetry();
         }
         // (B) RECIRCULATED ORIGINAL. The last hop already measured this packet and
@@ -285,7 +289,7 @@ control MyEgress(inout headers hdr,
                 }
             }
             if (hdr.mri.isValid()) {
-                swtrace_config.apply();
+                // swtrace_config.apply();
                 if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
                     add_swtrace();  // measures THIS egress port = the real delivery path
                     if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||

@@ -1,14 +1,17 @@
-2 z_final:
-	cd src/z_final && make build && make run
+2 main_code z_final:
+	cd ./src/z_final && make build && make run
+
+3 background_log_to_elastic:
+	cd src/z_final && python3 background_log_to_elastic.py
+
+1 main container:
+	cd container/p4_mininet && make
+
 
 split_more2:
 	cd src/split_more2 && make build && make run
 
-3 run_elastic:
-	cd src/split_more2 && make log_to_elastic_uv
 
-1 main container:
-	cd container/p4_mininet && make
 
 # keep this in extra background terminal open
 0 sshtmux elastic:
