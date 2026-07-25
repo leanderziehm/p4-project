@@ -11,7 +11,7 @@ const bit<5>  IPV4_OPTION_MRI = 31;
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
 #define PKT_INSTANCE_TYPE_EGRESS_CLONE 2
 // #define PKT_INSTANCE_TYPE_COALESCED 3
-// #define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
+#define PKT_INSTANCE_TYPE_INGRESS_RECIRC 4
 // #define PKT_INSTANCE_TYPE_REPLICATION 5
 // #define PKT_INSTANCE_TYPE_RESUBMIT 6
 #define MAX_HOPS 9
@@ -21,10 +21,10 @@ const bit<5>  IPV4_OPTION_MRI = 31;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<32> switchID_t;
-typedef bit<32> qdepth_t;
-typedef bit<32> qtime_t;
-typedef bit<32> ingress_ts_t;
+typedef bit<8>  switchID_t;   // tip #3: right-sized (only a handful of switches)
+typedef bit<24> qdepth_t;     // tip #3: 0..16.7M packets, cannot realistically overflow
+typedef bit<32> qtime_t;      // kept 32-bit: queue time can be large under congestion
+typedef bit<32> ingress_ts_t; // kept 32-bit: keep timestamp precision for hop deltas
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
@@ -33,7 +33,8 @@ header ethernet_t {
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    diffserv;
+    bit<6>    dscp;
+    bit<2>    ecn;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -171,6 +172,9 @@ control MyIngress(inout headers hdr,
     }
     apply {
         if (hdr.ipv4.isValid()) {
+            // Forwarding only. The last-hop clone/strip is decided in egress, where
+            // the per-hop queue metrics are actually available. On the recirculated
+            // pass this simply re-sets egress_spec toward the real host.
             ipv4_lpm.apply();
         }
     }
@@ -214,15 +218,18 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
         hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
-        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold) {
-            hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
+        // RFC 3168: only mark Congestion Experienced (CE = 11) when the endpoints are
+        // ECN-capable (ECN bits currently 01 or 10). Leave Non-ECT (00) traffic alone.
+        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold && hdr.ipv4.ecn != 0) {
+            hdr.ipv4.ecn = (bit<2>)0x03; // set to 11
         }
-        hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
-        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
-        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
+        // Each swtrace is now 12 bytes (3 x 32-bit words): swid8 + qdepth24 + ts32 + qtime32.
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 3;
+        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 12;
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 12;
     }
     action redirect_clone_to_telemetry() {
-        // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
+        truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
         hdr.mri.isClone = (bit<32>) 1;
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
         standard_metadata.egress_spec = meta.egress_metadata.telemetry_port;
@@ -230,7 +237,7 @@ control MyEgress(inout headers hdr,
     action strip_telemetry_headers() {
         bit<16> telemetry_bytes;
         // telemetry_bytes = 4 + 8 + (bit<16>)hdr.mri.count * 16;
-        telemetry_bytes = 8 + (bit<16>)hdr.mri.count * 16;
+        telemetry_bytes = 8 + (bit<16>)hdr.mri.count * 12;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen - telemetry_bytes;
         // hdr.ipv4.totalLen = hdr.ipv4.totalLen - (bit<16>) 4;
         hdr.mri.setInvalid();
@@ -254,41 +261,46 @@ control MyEgress(inout headers hdr,
         size = 64;
         default_action = NoAction();
     }
-    action do_clone() {
-        clone_preserving_field_list(CloneType.E2E, (bit<32>)99, (bit<8>)1); //cloned packet starts again again at start of egress.
-    }
-    table clone_on_last_hop {
-        key = {
-            hdr.ipv4.dstAddr: lpm;
-        }
-        actions = {
-            do_clone;
-            NoAction;
-        }
-        size = 64;
-        default_action = NoAction();
-    }
     apply {
 
-        if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
-                if(hdr.ipv4.protocol != PROTOCOL_ICMP){ //&& (hdr.ipv4.protocol == PROTOCOL_TCP || hdr.ipv4.protocol == PROTOCOL_UDP) ){
-                        init_telemetry();
-                    }
-        }
-        if (hdr.mri.isValid()) {
+         if (hdr.mri.isValid()) {
             swtrace_config.apply();
-            if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
-                add_swtrace();
-                if (hdr.mri.isClone ==  (bit<32>) 0 && standard_metadata.instance_type != PKT_INSTANCE_TYPE_EGRESS_CLONE ){
-                    clone_on_last_hop.apply();
-                }
-                if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
-                    hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
-                    if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
+         }
 
-                        redirect_clone_to_telemetry();
-                    } else {
-                        strip_telemetry_headers();
+        // (A) COLLECTOR COPY. This is the E2E clone taken at the end of the last
+        // hop's normal egress pass, BEFORE any stripping, so it still carries the
+        // full swtrace stack WITH the real last-hop metrics (measured on the port
+        // toward the actual host). Just redirect it to the telemetry collector.
+        if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE) {
+            // swtrace_config.apply();
+            redirect_clone_to_telemetry();
+        }
+        // (B) RECIRCULATED ORIGINAL. The last hop already measured this packet and
+        // mirrored a full copy to the collector; now strip telemetry and deliver a
+        // clean packet to the host.
+        else if (standard_metadata.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC) {
+            strip_telemetry_headers();
+        }
+        // (C) NORMAL FORWARDING. Accumulate this hop's telemetry.
+        else {
+            if (!hdr.mri.isValid() && hdr.ipv4.isValid()) {
+                if(hdr.ipv4.protocol != PROTOCOL_ICMP){ //&& (hdr.ipv4.protocol == PROTOCOL_TCP || hdr.ipv4.protocol == PROTOCOL_UDP) ){
+                    init_telemetry();
+                }
+            }
+            if (hdr.mri.isValid()) {
+                // swtrace_config.apply();
+                if (hdr.ipv4.dstAddr != meta.egress_metadata.telemetry_host) {
+                    add_swtrace();  // measures THIS egress port = the real delivery path
+                    if (hdr.ipv4.dstAddr == meta.egress_metadata.final_host1 ||
+                        hdr.ipv4.dstAddr == meta.egress_metadata.final_host2) {
+                        // Last hop. The packet now holds the full, real-measured stack.
+                        //  1) E2E-clone it to the collector. The clone snapshot is taken
+                        //     at the end of THIS pass and we do NOT strip here, so the
+                        //     collector copy is complete and faithful.
+                        //  2) recirculate this original so pass (B) can strip + deliver it.
+                        clone_preserving_field_list(CloneType.E2E, (bit<32>)99, (bit<8>)1);
+                        recirculate_preserving_field_list((bit<8>)0);
                     }
                 }
             }
@@ -304,7 +316,8 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             hdr.ipv4.isValid(),
             { hdr.ipv4.version,
               hdr.ipv4.ihl,
-              hdr.ipv4.diffserv, // todo ecn
+              hdr.ipv4.dscp, 
+              hdr.ipv4.ecn, 
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,
