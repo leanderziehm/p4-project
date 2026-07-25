@@ -183,7 +183,7 @@ def main():
     iface = 'eth0'
     print("sniffing on %s" % iface)
     sys.stdout.flush()
-    sniff(filter="(udp or tcp) and port 1234", iface = iface,
+    sniff(filter="(udp or tcp)", iface = iface,
           prn = lambda x: handle_pkt(x))
 
 if __name__ == '__main__':
