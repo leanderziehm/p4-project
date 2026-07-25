@@ -33,7 +33,8 @@ header ethernet_t {
 header ipv4_t {
     bit<4>    version;
     bit<4>    ihl;
-    bit<8>    diffserv;
+    bit<6>    dscp;
+    bit<2>    ecn;
     bit<16>   totalLen;
     bit<16>   identification;
     bit<3>    flags;
@@ -219,9 +220,8 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
         // RFC 3168: only mark Congestion Experienced (CE = 11) when the endpoints are
         // ECN-capable (ECN bits currently 01 or 10). Leave Non-ECT (00) traffic alone.
-        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold &&
-            (hdr.ipv4.diffserv & 0x03) != 0) {
-            hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
+        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold && hdr.ipv4.ecn != 0) {
+            hdr.ipv4.ecn = (bit<2>)0x03; // set to 11
         }
         // Each swtrace is now 12 bytes (3 x 32-bit words): swid8 + qdepth24 + ts32 + qtime32.
         hdr.ipv4.ihl = hdr.ipv4.ihl + 3;
@@ -316,7 +316,8 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
             hdr.ipv4.isValid(),
             { hdr.ipv4.version,
               hdr.ipv4.ihl,
-              hdr.ipv4.diffserv, // todo ecn
+              hdr.ipv4.dscp, 
+              hdr.ipv4.ecn, 
               hdr.ipv4.totalLen,
               hdr.ipv4.identification,
               hdr.ipv4.flags,

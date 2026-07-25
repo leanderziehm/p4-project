@@ -70,3 +70,22 @@ cd src/z_final && python3 background_log_to_elastic.py
 ```
 
 then you can see your data in kibana at port 5601 http://localhost:5601/
+
+
+# Test Iperf
+
+4. in `h22`'s xterm, start the iperf UDP server:
+   ```bash
+   iperf -s -u
+   ```
+
+5. In `h1`'s xterm, send one packet per second to `h2` using send.py
+   say for 30 seconds:
+   ```bash
+   ./send.py 10.0.2.2 "P4 is cool" 30
+   ```
+   The message "P4 is cool" should be received in `h2`'s xterm,
+6. In `h11`'s xterm, start iperf client sending for 15 seconds
+   ```bash
+   iperf -c 10.0.2.22 -t 15 -u
+   ```
