@@ -229,7 +229,7 @@ control MyEgress(inout headers hdr,
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 12;
     }
     action redirect_clone_to_telemetry() {
-        // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
+        truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
         hdr.mri.isClone = (bit<32>) 1;
         hdr.ipv4.dstAddr = meta.egress_metadata.telemetry_host;
         standard_metadata.egress_spec = meta.egress_metadata.telemetry_port;
