@@ -21,10 +21,10 @@ const bit<5>  IPV4_OPTION_MRI = 31;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<32> switchID_t;
-typedef bit<32> qdepth_t;
-typedef bit<32> qtime_t;
-typedef bit<32> ingress_ts_t;
+typedef bit<8>  switchID_t;   // tip #3: right-sized (only a handful of switches)
+typedef bit<24> qdepth_t;     // tip #3: 0..16.7M packets, cannot realistically overflow
+typedef bit<32> qtime_t;      // kept 32-bit: queue time can be large under congestion
+typedef bit<32> ingress_ts_t; // kept 32-bit: keep timestamp precision for hop deltas
 header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
@@ -217,12 +217,16 @@ control MyEgress(inout headers hdr,
         hdr.swtraces[0].qdepth     = (qdepth_t)standard_metadata.deq_qdepth;
         hdr.swtraces[0].ingress_ts = (ingress_ts_t)standard_metadata.ingress_global_timestamp;
         hdr.swtraces[0].qtime      = (qtime_t)standard_metadata.deq_timedelta;
-        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold) {
+        // RFC 3168: only mark Congestion Experienced (CE = 11) when the endpoints are
+        // ECN-capable (ECN bits currently 01 or 10). Leave Non-ECT (00) traffic alone.
+        if (hdr.swtraces[0].qtime > meta.egress_metadata.ecn_threshold &&
+            (hdr.ipv4.diffserv & 0x03) != 0) {
             hdr.ipv4.diffserv = hdr.ipv4.diffserv | 0x03;
         }
-        hdr.ipv4.ihl = hdr.ipv4.ihl + 4;
-        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 16;
-        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16;
+        // Each swtrace is now 12 bytes (3 x 32-bit words): swid8 + qdepth24 + ts32 + qtime32.
+        hdr.ipv4.ihl = hdr.ipv4.ihl + 3;
+        hdr.ipv4_option.optionLength = hdr.ipv4_option.optionLength + 12;
+        hdr.ipv4.totalLen = hdr.ipv4.totalLen + 12;
     }
     action redirect_clone_to_telemetry() {
         // truncate((bit<32>) hdr.ipv4.totalLen); // uncomment later
@@ -233,7 +237,7 @@ control MyEgress(inout headers hdr,
     action strip_telemetry_headers() {
         bit<16> telemetry_bytes;
         // telemetry_bytes = 4 + 8 + (bit<16>)hdr.mri.count * 16;
-        telemetry_bytes = 8 + (bit<16>)hdr.mri.count * 16;
+        telemetry_bytes = 8 + (bit<16>)hdr.mri.count * 12;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen - telemetry_bytes;
         // hdr.ipv4.totalLen = hdr.ipv4.totalLen - (bit<16>) 4;
         hdr.mri.setInvalid();

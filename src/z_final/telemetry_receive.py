@@ -2,12 +2,14 @@
 import sys
 
 from scapy.all import (
+    ByteField,
     FieldLenField,
     IntField,
     IPOption,
     Packet,
     PacketListField,
     ShortField,
+    ThreeBytesField,
     get_if_list,
     sniff
 )
@@ -27,9 +29,10 @@ def get_if():
     return iface
 
 class SwitchTrace(Packet):
+    # Must match switch_t in mri.p4: swid8 + qdepth24 + ingress_ts32 + qtime32 = 12 bytes.
     fields_desc = [
-        IntField("swid", 0),
-        IntField("qdepth", 0),
+        ByteField("swid", 0),
+        ThreeBytesField("qdepth", 0),
         IntField("ingress_ts", 0),
         IntField("qtime", 0),
     ]
