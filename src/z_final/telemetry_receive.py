@@ -73,13 +73,13 @@ def extract_packet_info(pkt:Packet):
 
             for option in pkt[IP].options:
 
-                if hasattr(option, "originalDstAddr"):
+                # if hasattr(option, "originalDstAddr"):
                     # print("originalDstAddr")
                     # print(option.originalDstAddr)
                     # ip_string = option.originalDstAddr
-                    ip_string = ltoa(option.originalDstAddr)
+                    # ip_string = ltoa(option.originalDstAddr)
                     # print(ip_string)
-                    entry["originalDstAddr"] = ip_string
+                    # entry["originalDstAddr"] = ip_string
 
 
 
@@ -161,7 +161,7 @@ class IPOption_MRI(IPOption):
                                   length_of="swtraces",
                                   adjust=lambda pkt,l:l*2+4),
                     ShortField("count", 0),
-                    IntField("originalDstAddr", 0),
+                    IntField("isClone", 0),
                     PacketListField("swtraces",
                                    [],
                                    SwitchTrace,
